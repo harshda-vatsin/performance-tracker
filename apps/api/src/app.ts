@@ -96,7 +96,9 @@ export function buildApp(pool: pg.Pool): FastifyInstance {
     return {
       user: { userId: a.userId, loginId: a.loginId, fullName: a.fullName },
       roles: a.assignments.map((r) => ({ code: r.roleCode, scopeType: r.scopeType, scopePath: r.scopePath })),
-      permissions: [...new Set(a.assignments.flatMap((r) => r.permissions))].sort(),
+      // Only permissions the caller can exercise: an assignment with no company or org-unit scope (SELF / ASSIGNED) grants
+      // nothing the server's scope checks would accept, so it must not light up screens that can only answer 403.
+      permissions: [...new Set(a.assignments.filter((r) => r.scopeType === 'COMPANY' || r.scopePath).flatMap((r) => r.permissions))].sort(),
     };
   });
 

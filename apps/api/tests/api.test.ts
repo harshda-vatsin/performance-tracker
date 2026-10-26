@@ -141,6 +141,18 @@ describe('authorisation (server-enforced)', () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
+  it('/me lists only permissions with a usable scope, so a self-scoped role is not offered screens it cannot open', async () => {
+    await user('E1090', 'SUP', 'SELF');
+    const { cookie } = await loginAs('E1090');
+    const me = (await get('/me', cookie)).json();
+    expect(me.roles).toHaveLength(1);
+    expect(me.permissions).toEqual([]);
+    expect((await get('/org/units', cookie)).statusCode).toBe(403);
+
+    const { cookie: plant } = await loginAs('E1002');
+    expect((await get('/me', plant)).json().permissions).toContain('submissions:enter');
+  });
+
   it('plant-scoped Plant HR sees only their own plant subtree', async () => {
     const { cookie } = await loginAs('E1002');
     const res = await get('/org/units', cookie);

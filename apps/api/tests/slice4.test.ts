@@ -179,6 +179,11 @@ describe('scorecard adjustments (maker-checker)', () => {
     const ok = await env.post(`/scorecard-change-requests/${requestId}/decision`, { approve: true, comment: 'Agreed' }, c.ph);
     expect(ok.json()).toMatchObject({ state: 'APPROVED', version: 2 });
     expect((await env.post(`/scorecard-change-requests/${requestId}/decision`, { approve: true }, c.ph)).json().error).toBe('ALREADY_DECIDED');
+
+    // After approval the scorecard has new KRA ids; the proposal must still say which KRA it changed and from what.
+    const listed = (await env.get(`/scorecards/${sc.d1}/change-requests`, c.hod1)).json().requests[0].changes[0];
+    expect(typeof listed.nameEn).toBe('string');
+    expect(listed.before).toMatchObject({ presentLevel: expect.any(Number), targets: expect.any(Array) });
   });
 
   it('the new version applies from its month only; earlier months keep their snapshot', async () => {

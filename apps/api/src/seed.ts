@@ -152,7 +152,8 @@ export async function seed(pool: pg.Pool): Promise<SeededLogin[] | null> {
   await seedReferenceData(pool);
   const created: SeededLogin[] = [];
   for (const u of USERS) {
-    const password = randomBytes(12).toString('base64url');
+    // SEED_PASSWORD gives every dev user one known password (used by the browser e2e suite); otherwise random per user.
+    const password = process.env.SEED_PASSWORD ?? randomBytes(12).toString('base64url');
     const { userId } = await createUserAccount(pool, {
       employeeCode: u.code,
       fullName: u.name,

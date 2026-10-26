@@ -118,12 +118,23 @@ export function scorecardChangeRoutes(app: FastifyInstance, pool: pg.Pool, g: Gu
     const sc = await latestVersion((req.params as { id: string }).id);
     if (!sc || !(await g.canAtUnit(req.auth!, 'scorecards:read', sc.orgUnitId))) return reply.code(404).send({ error: 'NOT_FOUND' });
     const { rows } = await pool.query(
-      `SELECT id, effective_period AS "effectivePeriod", reason, changes, state, decision_comment AS "decisionComment",
-              created_at AS "createdAt", decided_at AS "decidedAt"
+      `SELECT id, base_version_id AS "baseVersionId", effective_period AS "effectivePeriod", reason, changes, state,
+              decision_comment AS "decisionComment", created_at AS "createdAt", decided_at AS "decidedAt"
        FROM core.scorecard_change_request WHERE scorecard_id = $1 ORDER BY created_at DESC`,
       [sc.id],
     );
-    return { requests: rows };
+    // A change names its KRA by id in the version it was proposed against. Once approved, the scorecard moves to a
+    // new version with new ids, so each change carries the KRA's name and its values at proposal time for display.
+    const bases = new Map<string, BaseKra>();
+    for (const v of new Set(rows.map((r) => r.baseVersionId as string))) for (const k of await baseKras(v)) bases.set(k.id, k);
+    const requests = rows.map(({ baseVersionId: _v, ...r }) => ({
+      ...r,
+      changes: (r.changes as Change[]).map((c) => {
+        const k = bases.get(c.kraId);
+        return { ...c, nameEn: k?.nameEn ?? null, before: k ? { presentLevel: k.presentLevel, targets: k.targets } : null };
+      }),
+    }));
+    return { requests };
   });
 
   app.post('/scorecard-change-requests/:id/decision', { preHandler: g.requirePermission('scorecards:approve') }, async (req, reply) => {
