@@ -73,9 +73,10 @@
   }
 }
 
-/* Below the md breakpoint a .stack-table turns each row into a card and each cell into a "label  value" line, so wide
-   data-entry tables need no sideways scrolling. The markup is unchanged: the header row stays for screen readers. */
-@media (max-width: 767px) {
+/* Below the lg breakpoint a .stack-table turns each row into a card and each cell into a "label  value" line, so wide
+   data-entry tables need no sideways scrolling on phones or tablets. The markup is unchanged: the header row stays for
+   screen readers. */
+@media (max-width: 1023px) {
   .stack-table,
   .stack-table tbody,
   .stack-table tr,

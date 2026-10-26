@@ -212,7 +212,7 @@ export function SubmissionPage() {
 
         <Card title="Results" subtitle="Enter this month's result for each KRA, or mark it N/A with a reason." pad={false}>
           <TableWrap>
-            <table className="stack-table w-full md:min-w-[900px]" aria-label="Monthly results">
+            <table className="stack-table w-full lg:min-w-[900px]" aria-label="Monthly results">
               <thead>
                 <tr>
                   <th className="th">Cat</th>
@@ -236,7 +236,7 @@ export function SubmissionPage() {
                       <td className="td">
                         <Chip tone="accent">{r.pqcdsm}</Chip>
                       </td>
-                      <td className="td md:min-w-[180px]">
+                      <td className="td lg:min-w-[180px]">
                         <div className="stack-value">
                           <div className="font-medium text-slate-900">{r.nameEn}</div>
                           <div className="muted">
@@ -282,7 +282,7 @@ export function SubmissionPage() {
                         )}
                         </div>
                       </td>
-                      <td className="td md:min-w-[180px]" data-label="Comment">
+                      <td className="td lg:min-w-[180px]" data-label="Comment">
                         <div className="stack-value">
                           {editable ? <input className="input" aria-label={`Comment for ${r.nameEn}`} value={e.remarks} onChange={(ev) => set(r.kraId, { remarks: ev.target.value })} /> : <span className="text-sm">{e.remarks || '—'}</span>}
                         </div>
