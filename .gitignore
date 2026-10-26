@@ -1,0 +1,23 @@
+node_modules
+dist
+coverage
+*.log
+*.tsbuildinfo
+
+# Secrets and local configuration: never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+id_rsa*
+secrets/
+
+# Uploaded or exported business data
+uploads/
+exports/
+
+# Generated demo screenshots and exports
+apps/demo/screenshots/
