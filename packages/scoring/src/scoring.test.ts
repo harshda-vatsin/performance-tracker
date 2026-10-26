@@ -6,8 +6,10 @@ import {
   scoreEmployee,
   scoreKra,
   scoreLevel,
+  quarterMean,
   scoreQuarter,
   scoreYear,
+  scoreYearFromMonths,
   type KraInput,
 } from './index';
 
@@ -190,6 +192,23 @@ describe('roll-ups', () => {
   it('returns null when nothing is locked', () => {
     expect(scoreQuarter([null, null, null], FORGE_PARAMS)).toBeNull();
     expect(scoreYear([null, null, null, null], FORGE_PARAMS)).toBeNull();
+    expect(scoreYearFromMonths([[null, null, null], [null], [], []], FORGE_PARAMS)).toBeNull();
+  });
+
+  it('year averages the UNROUNDED quarter scores and rounds only the final result', () => {
+    // Q1 = (78 + 106 + 84) / 3 = 89.3333..., Q2 = 100. Averaging the displayed 89.33 would give 94.66 (a half-cent off).
+    expect(scoreQuarter([78, 106, 84], FORGE_PARAMS)).toBe(89.33);
+    expect(scoreYearFromMonths([[78, 106, 84], [100], [null], [null]], FORGE_PARAMS)).toBe(94.67);
+    expect(scoreYear([quarterMean([78, 106, 84]), 100], FORGE_PARAMS)).toBe(94.67);
+  });
+
+  it('does not round twice: quarters that round apart do not move the year', () => {
+    // Quarters 80.004 and 80.0059 display as 80 and 80.01; the true mean is 80.00495, which rounds to 80.
+    expect(scoreYearFromMonths([[80.004], [80.0059]], FORGE_PARAMS)).toBe(80);
+  });
+
+  it('leaves quarters that are already exact unchanged', () => {
+    expect(scoreYearFromMonths([[94, 94, 94], [90], [85], [95]], FORGE_PARAMS)).toBe(91);
   });
 
   it('15. mid-month transfer is weighted by days', () => {

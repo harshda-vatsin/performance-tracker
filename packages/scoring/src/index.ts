@@ -125,19 +125,34 @@ export function scoreLevel(kras: LevelKra[], params: ScoringParams): LevelScore 
   return { score: roundHalfUp(weighted / weightSum, params.rounding.level), flags: [] };
 }
 
-function average(values: (number | null)[], digits: number): number | null {
+/** Plain mean of the non-null values, unrounded; null when there are none. */
+function mean(values: (number | null)[]): number | null {
   const present = values.filter((v): v is number => v !== null);
   if (present.length === 0) return null;
-  return roundHalfUp(present.reduce((s, v) => s + v, 0) / present.length, digits);
+  return present.reduce((s, v) => s + v, 0) / present.length;
 }
 
-/** Average of the monthly level scores; months not yet locked are passed as null and skipped. */
+const roundOrNull = (v: number | null, digits: number): number | null => (v === null ? null : roundHalfUp(v, digits));
+
+/** Unrounded quarter score: the input to `scoreYear`, so rounding happens once, at the end. */
+export const quarterMean = (monthly: (number | null)[]): number | null => mean(monthly);
+
+/** Average of the monthly level scores; months not yet locked are passed as null and skipped. Rounded for display. */
 export function scoreQuarter(monthly: (number | null)[], params: ScoringParams): number | null {
-  return average(monthly, params.rounding.quarter);
+  return roundOrNull(mean(monthly), params.rounding.quarter);
 }
 
+/**
+ * Average of the quarter scores, rounded once. Pass UNROUNDED quarter scores (`quarterMean`): averaging the rounded,
+ * displayed quarter scores would round twice and can land a half-cent off (89.33 and 100 give 94.66, not 94.67).
+ */
 export function scoreYear(quarters: (number | null)[], params: ScoringParams): number | null {
-  return average(quarters, params.rounding.year);
+  return roundOrNull(mean(quarters), params.rounding.year);
+}
+
+/** Year score straight from the monthly scores of each quarter: unrounded quarter means, one final rounding. */
+export function scoreYearFromMonths(monthsByQuarter: (number | null)[][], params: ScoringParams): number | null {
+  return scoreYear(monthsByQuarter.map(quarterMean), params);
 }
 
 export interface UnitStint {
