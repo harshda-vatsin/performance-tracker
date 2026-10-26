@@ -70,7 +70,7 @@ beforeAll(async () => {
   ids.p1 = p1.rows[0].id;
   ids.p2 = p2.rows[0].id;
 
-  await user('E1001', 'SA');
+  await user('E1001', 'ADMIN');
   await user('E1002', 'PHR', 'PLANT', ids.p1);
   await user('E1003', 'CHR');
   await user('E1004'); // no roles
@@ -141,13 +141,14 @@ describe('authorisation (server-enforced)', () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
-  it('/me lists only permissions with a usable scope, so a self-scoped role is not offered screens it cannot open', async () => {
-    await user('E1090', 'SUP', 'SELF');
+  it('/me lists only permissions the caller can use, so an Employee is offered their own scores and nothing else', async () => {
+    await user('E1090', 'EMP', 'SELF');
     const { cookie } = await loginAs('E1090');
     const me = (await get('/me', cookie)).json();
     expect(me.roles).toHaveLength(1);
-    expect(me.permissions).toEqual([]);
+    expect(me.permissions).toEqual(['myscores:read']);
     expect((await get('/org/units', cookie)).statusCode).toBe(403);
+    expect((await get('/me/scores', cookie)).statusCode).toBe(200);
 
     const { cookie: plant } = await loginAs('E1002');
     expect((await get('/me', plant)).json().permissions).toContain('submissions:enter');
@@ -193,9 +194,10 @@ describe('separation of duties', () => {
     expect(res.json().error).toMatch(/^SOD:/);
   });
 
-  it('rejects CHR + CHR_H on one account', async () => {
+  it('has no Co-HR Head role any more: granting CHR_H is an unknown role', async () => {
     const res = await grant('E1003', 'CHR_H');
-    expect(res.statusCode).toBe(409);
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error).toBe('UNKNOWN_ROLE');
   });
 
   it('rejects PHR + PH at the same plant but allows them at different plants', async () => {
@@ -212,7 +214,7 @@ describe('separation of duties', () => {
   });
 
   it('rejects the same combinations when inserted directly in SQL (database-level guard)', async () => {
-    await expect(assign(ids.E1001, 'MD', 'COMPANY')).rejects.toThrow(/SOD/);
+    await expect(assign(ids.E1001, 'MGMT', 'COMPANY')).rejects.toThrow(/SOD/);
   });
 });
 

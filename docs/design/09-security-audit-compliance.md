@@ -39,7 +39,7 @@ Also: **CSRF** (SameSite + token), **clickjacking** (frame-ancestors), **DoS** (
 
 - **What**: all create/update/delete of business entities, rule and scorecard changes (before/after JSON diff), every workflow transition, approvals and rejections with comments, imports and exports (file hash, row counts), pay-data reads of per-employee amounts, authentication and access events, admin actions, delegations.
 - **How**: written in the same DB transaction as the change (cannot be skipped by a crash), append-only `audit_log` with `prev_hash`/`row_hash` chaining; DB role used by the app has `INSERT` only. A nightly job verifies the chain and alerts on a break; the head hash is periodically written to external object storage (WORM bucket) for tamper evidence.
-- **Who sees it**: Auditor and Co-HR Head (business events), Super Admin (system events), each user their own activity. Pay-value fields in audit rows are masked for roles without `pay:read`.
+- **Who sees it**: Corporate HR (business events), Admin (system events), each user their own activity. Pay-value fields in audit rows are masked for roles without `pay:read`.
 - **Retention**: 8 years (doc 02), cold-archived after 2.
 - **Usability**: searchable by entity, actor, date, action; "show full history" on every scorecard, submission and rule.
 

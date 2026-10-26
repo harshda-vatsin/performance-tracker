@@ -94,10 +94,10 @@ Errors block commit; warnings need an acknowledgement.
 | Export | Format | Content | Access |
 |---|---|---|---|
 | Monthly PMS sheet per department/cell | .xlsx in the client's familiar layout | KRAs, PL, targets, results, KRA scores, level scores, flags | Scoped to unit |
-| Quarterly / yearly summaries | .xlsx, .pdf | Per level, per unit, per plant; plant-vs-plant within type | Scoped; MD/Co-HR company-wide |
+| Quarterly / yearly summaries | .xlsx, .pdf | Per level, per unit, per plant; plant-vs-plant within type | Scoped; Management/Corporate HR company-wide |
 | **Payroll file** per plant and consolidated | .xlsx and .csv with configurable columns | employee code, name, plant, component, base, score, %, amount, rule version, batch ID | Pay roles only; step-up; watermarked; logged |
 | Exception report | .xlsx | Missing scores, no weights, gaps, ineligible employees | Co-HR |
-| Audit extract | .csv | Filtered audit rows | Auditor / Co-HR Head |
+| Audit extract | .csv | Filtered audit rows | Corporate HR (business) / Admin (system) |
 | Individual statement | PDF | Own scores and bonus statement | Self |
 
 Export safeguards:

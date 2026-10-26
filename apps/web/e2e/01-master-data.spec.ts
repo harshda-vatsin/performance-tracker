@@ -71,7 +71,7 @@ test('a KRA template is drafted by one person and approved by another', async ({
   await logout(page);
 
   await as(page, 'E0004', async () => {
-    // Co-HR Head: the checker
+    // A second Corporate HR user: the checker
     await expect(page.getByText('Template to approve · Forge shop KRAs v1')).toBeVisible();
     await page.getByText('Template to approve · Forge shop KRAs v1').click();
     await page.getByRole('button', { name: 'Approve and activate' }).click();
@@ -131,8 +131,12 @@ test('role and scope are respected in navigation and data', async ({ page }) => 
     await expect(page.getByRole('cell', { name: 'Arul Das' })).toHaveCount(0); // Press Shop is outside this HOD's scope
   });
   await as(page, 'E0105', async () => {
-    // Supervisor: signed in, but no portal screens in this release.
-    await expect(page.getByText('has no portal screens in this release')).toBeVisible();
+    // Employee: only their own results, none of the unit screens.
+    const nav = page.getByRole('navigation', { name: 'Main navigation' });
+    await expect(nav.getByRole('link', { name: 'My results' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Monthly entry' })).toHaveCount(0);
+    await gotoNav(page, 'My results');
+    await expect(page.getByText('No results yet')).toBeVisible();
     await page.goto('/submissions');
     await expect(page.getByText('Not available for your role')).toBeVisible();
   });

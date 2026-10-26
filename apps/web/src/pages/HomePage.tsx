@@ -55,7 +55,7 @@ export function HomePage() {
           </ul>
           {links.length === 0 && (
             <p className="mt-4 text-xs text-slate-500">
-              Your role is signed in but has no portal screens in this release. Supervisors, senior engineers and reviewers will get personal scorecard views in a later slice.
+              Your role is signed in but has no portal screens in this release.
             </p>
           )}
         </Card>

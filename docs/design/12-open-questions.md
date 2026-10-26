@@ -28,7 +28,7 @@ Priority: **B** = blocks Phase 1 design/build, **P2** = needed before Phase 2, *
 | 15 | How are leavers, joiners and long leave pro-rated? | Days present ÷ working days | P2 |
 | 16 | Which score drives incentive: individual level score, unit score, or a plant-wide figure? | Level score | P2 |
 | 17 | Required payroll file layout and who loads it? Any sample? | Configurable columns | P2 |
-| 18 | Approval chain before release (Co-HR Head only, or Finance/MD too)? | Co-HR Head | P2 |
+| 18 | Approval chain before release (a second Corporate HR user only, or Finance/MD too)? | A different Corporate HR user | P2 |
 
 ## C. Organisation and people
 
@@ -58,7 +58,7 @@ Priority: **B** = blocks Phase 1 design/build, **P2** = needed before Phase 2, *
 |---|---|---|---|
 | 31 | Monthly deadlines per step and per plant; holiday calendars? | Doc 06 defaults | B |
 | 32 | Is verification by HOD/Cell Incharge per unit, and is Plant Head approval per unit or per plant? | Verify per unit; approve in bulk | B |
-| 33 | Who may request and approve a reopen after lock? Time limit? | Co-HR / Plant Head request; Co-HR Head approves | B |
+| 33 | Who may request and approve a reopen after lock? Time limit? | Corporate HR / Plant Head request; a different Corporate HR user approves | B |
 | 34 | Is Co-HR entry on behalf of a plant permitted? | Yes with reason; SoD applies | B |
 | 35 | Does the client want an "employee dispute" channel for monthly scores? | Comment + HR ticket, later | L |
 

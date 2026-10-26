@@ -3,7 +3,7 @@ import { get } from '../lib/api';
 import { useAsync } from '../lib/hooks';
 import type { AdminUser } from '../lib/types';
 
-/** Identity fields only: the Super Admin never sees scores or pay (doc 04 §3). */
+/** Identity fields only: the Admin never sees scores or pay (doc 04 §3). */
 export function AdminUsersPage() {
   const users = useAsync(() => get<{ users: AdminUser[] }>('/admin/users'), []);
   return (

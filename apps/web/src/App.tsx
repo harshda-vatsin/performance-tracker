@@ -3,7 +3,11 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import { Layout } from './components/Layout';
 import { Empty, Loading } from './components/ui';
+import { AUDIT_PERMS } from './lib/nav';
 import { AdminUsersPage } from './pages/AdminUsersPage';
+import { AppraisalsPage } from './pages/AppraisalsPage';
+import { AuditLogPage } from './pages/AuditLogPage';
+import { MyResultsPage } from './pages/MyResultsPage';
 import { EmployeesPage } from './pages/EmployeesPage';
 import { ManagementPage } from './pages/ManagementPage';
 import { PlantsPage } from './pages/PlantsPage';
@@ -30,9 +34,9 @@ function Protected({ children }: { children: ReactNode }) {
 }
 
 /** Hides a screen the user's role cannot use (the API enforces this too; this just avoids dead links). */
-export function Gate({ perm, children }: { perm: string; children: ReactNode }) {
+export function Gate({ perm, children }: { perm: string | string[]; children: ReactNode }) {
   const { can } = useAuth();
-  if (!can(perm)) return <Empty title="Not available for your role" hint="Your role does not include this screen. If you think it should, ask your administrator." />;
+  if (![perm].flat().some(can)) return <Empty title="Not available for your role" hint="Your role does not include this screen. If you think it should, ask your administrator." />;
   return <>{children}</>;
 }
 
@@ -62,6 +66,9 @@ export function App() {
         <Route path="dashboards/unit" element={<Gate perm="scores:read"><UnitTrendPage /></Gate>} />
         <Route path="dashboards/management" element={<Gate perm="scores:read"><ManagementPage /></Gate>} />
         <Route path="admin/users" element={<Gate perm="users:manage"><AdminUsersPage /></Gate>} />
+        <Route path="audit" element={<Gate perm={AUDIT_PERMS}><AuditLogPage /></Gate>} />
+        <Route path="my-results" element={<Gate perm="myscores:read"><MyResultsPage /></Gate>} />
+        <Route path="appraisals" element={<Gate perm="appraisals:read"><AppraisalsPage /></Gate>} />
         <Route path="*" element={<Empty title="Page not found" hint="Use the menu on the left." />} />
       </Route>
     </Routes>

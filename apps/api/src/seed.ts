@@ -15,36 +15,43 @@ interface SeedUser {
   code: string;
   name: string;
   role: string;
-  /** Org unit code the role is scoped to; omit for COMPANY / SELF / ASSIGNED scopes. */
+  /** Org unit code the role is scoped to; omit for COMPANY / SELF scopes. */
   unit?: string;
-  scopeType: 'COMPANY' | 'PLANT' | 'DEPARTMENT' | 'CELL' | 'SELF' | 'ASSIGNED';
+  scopeType: 'COMPANY' | 'PLANT' | 'DEPARTMENT' | 'CELL' | 'SELF';
   authMode?: 'PASSWORD' | 'OTP_ONLY';
 }
 
 const USERS: SeedUser[] = [
-  { code: 'E0001', name: 'Arun Kumar (IT admin)', role: 'SA', scopeType: 'COMPANY' },
-  { code: 'E0002', name: 'Meera Subramanian (MD)', role: 'MD', scopeType: 'COMPANY' },
+  { code: 'E0001', name: 'Arun Kumar (IT admin)', role: 'ADMIN', scopeType: 'COMPANY' },
+  { code: 'E0002', name: 'Meera Subramanian (MD)', role: 'MGMT', scopeType: 'COMPANY' },
+  // Two Corporate HR users, so one can author a template or reopen request and the other can approve it.
   { code: 'E0003', name: 'Ravi Shankar (Corporate HR)', role: 'CHR', scopeType: 'COMPANY' },
-  { code: 'E0004', name: 'Lakshmi Narayanan (Co-HR Head)', role: 'CHR_H', scopeType: 'COMPANY' },
-  { code: 'E0005', name: 'Suresh Babu (Auditor)', role: 'AUD', scopeType: 'COMPANY' },
+  { code: 'E0004', name: 'Lakshmi Narayanan (Corporate HR)', role: 'CHR', scopeType: 'COMPANY' },
+  { code: 'E0005', name: 'Suresh Babu (Employee, head office)', role: 'EMP', scopeType: 'SELF' },
   // Plant 1: Trichy (Forge)
   { code: 'E0101', name: 'Kavitha R (Plant HR, Trichy)', role: 'PHR', unit: 'TRY', scopeType: 'PLANT' },
   { code: 'E0102', name: 'Murugan S (Plant Head, Trichy)', role: 'PH', unit: 'TRY', scopeType: 'PLANT' },
   { code: 'E0103', name: 'Senthil K (HOD, Hammer Shop)', role: 'HOD', unit: 'TRY-HAM', scopeType: 'DEPARTMENT' },
   { code: 'E0104', name: 'Palani V (HOD, Press Shop)', role: 'HOD', unit: 'TRY-PRS', scopeType: 'DEPARTMENT' },
-  { code: 'E0105', name: 'Dinesh M (Shift Incharge)', role: 'SUP', scopeType: 'SELF' },
-  { code: 'E0106', name: 'Selvam P (Supervisor, floor)', role: 'SUP', scopeType: 'SELF', authMode: 'OTP_ONLY' },
-  { code: 'E0107', name: 'Priya L (Senior engineer)', role: 'SEN', scopeType: 'SELF' },
+  { code: 'E0105', name: 'Dinesh M (Shift Incharge)', role: 'EMP', scopeType: 'SELF' },
+  { code: 'E0106', name: 'Selvam P (Supervisor, floor)', role: 'EMP', scopeType: 'SELF', authMode: 'OTP_ONLY' },
+  { code: 'E0107', name: 'Priya L (Senior engineer)', role: 'EMP', scopeType: 'SELF' },
   // Plant 2: Singampunari (Machine)
   { code: 'E0201', name: 'Anitha G (Plant HR, Singampunari)', role: 'PHR', unit: 'SGP', scopeType: 'PLANT' },
   { code: 'E0202', name: 'Karthik J (Plant Head, Singampunari)', role: 'PH', unit: 'SGP', scopeType: 'PLANT' },
   { code: 'E0203', name: 'Vignesh T (Cell Incharge, MAG)', role: 'HOD', unit: 'SGP-MAG', scopeType: 'CELL' },
   { code: 'E0204', name: 'Gopal N (Cell Incharge, TML)', role: 'HOD', unit: 'SGP-TML', scopeType: 'CELL' },
-  { code: 'E0205', name: 'Rajesh A (Setter and Supervisor)', role: 'SUP', scopeType: 'SELF' },
-  { code: 'E0206', name: 'Divya B (Reviewer)', role: 'REV', scopeType: 'ASSIGNED' },
+  { code: 'E0205', name: 'Rajesh A (Setter and Supervisor)', role: 'EMP', scopeType: 'SELF' },
+  { code: 'E0206', name: 'Divya B (Employee)', role: 'EMP', scopeType: 'SELF' },
   // Plant 3: Viralimalai (Forge), for scope tests
   { code: 'E0301', name: 'Ramesh C (Plant HR, Viralimalai)', role: 'PHR', unit: 'VLM', scopeType: 'PLANT' },
-  { code: 'E0302', name: 'Sangeetha D (Senior engineer)', role: 'SEN', scopeType: 'SELF' },
+  { code: 'E0302', name: 'Sangeetha D (Senior engineer)', role: 'EMP', scopeType: 'SELF' },
+];
+
+/** FY 2026-27 appraisals for the two senior engineers; the reviewer is an assignment, not a role. */
+const APPRAISALS: { employee: string; reviewer: string }[] = [
+  { employee: 'E0107', reviewer: 'E0102' }, // Plant Head, Trichy
+  { employee: 'E0302', reviewer: 'E0002' }, // Management
 ];
 
 async function unit(
@@ -169,6 +176,19 @@ export async function seed(pool: pg.Pool): Promise<SeededLogin[] | null> {
     );
     await audit(pool, { action: 'ROLE_GRANTED', entityType: 'user_account', entityId: userId, after: { role: u.role, scope: u.unit ?? u.scopeType } });
     created.push({ login: u.code, password, name: u.name, role: u.role, scope: u.unit ?? u.scopeType });
+  }
+
+  const hr = (await pool.query("SELECT id FROM core.user_account WHERE login_id = 'E0003'")).rows[0].id;
+  for (const a of APPRAISALS) {
+    const { rows } = await pool.query(
+      `INSERT INTO core.appraisal (employee_id, fiscal_year, reviewer_user_id, assigned_by, created_by)
+       SELECT e.id, 2026, r.id, $3, $3
+       FROM core.employee e, core.user_account r
+       WHERE e.employee_code = $1 AND r.login_id = $2
+       RETURNING id`,
+      [a.employee, a.reviewer, hr],
+    );
+    await audit(pool, { actorId: hr, action: 'APPRAISAL_CREATED', entityType: 'appraisal', entityId: rows[0].id, after: { employeeCode: a.employee, fiscalYear: 2026, reviewer: a.reviewer } });
   }
   return created;
 }

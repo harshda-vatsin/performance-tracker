@@ -48,12 +48,12 @@ beforeAll(async () => {
   }
   await env.user('E1002', 'PHR', 'PLANT', ids.p1);
   await env.user('E1003', 'CHR');
-  await env.user('E1004', 'CHR_H');
+  await env.user('E1004', 'CHR'); // second Corporate HR user: approves what E1003 authors
   await env.user('E1005', 'PH', 'PLANT', ids.p1);
   await env.user('E1007', 'HOD', 'DEPARTMENT', ids.d1);
   await env.user('E1008', 'HOD', 'DEPARTMENT', ids.d1b);
   await env.user('E1009', 'PHR', 'PLANT', ids.p2);
-  await env.user('E1011', 'MD');
+  await env.user('E1011', 'MGMT');
   for (const [key, code] of [['phr1', 'E1002'], ['chr', 'E1003'], ['chrH', 'E1004'], ['ph', 'E1005'], ['hod1', 'E1007'], ['hod1b', 'E1008'], ['phr2', 'E1009'], ['md', 'E1011']]) {
     c[key] = (await env.loginAs(code)).cookie;
   }

@@ -182,7 +182,7 @@ export function TemplateDetailPage() {
         {t.status === 'DRAFT' && !isMaker && can('templates:approve') && (
           <Notice>You can approve this draft because you are not its author. Activation checks every rule below.</Notice>
         )}
-        {t.status === 'DRAFT' && isMaker && <Notice>A different person (Co-HR Head) must approve this draft before it goes live. Drafts can be saved incomplete.</Notice>}
+        {t.status === 'DRAFT' && isMaker && <Notice>A different Corporate HR user must approve this draft before it goes live. Drafts can be saved incomplete.</Notice>}
 
         <Card title="Checks" subtitle={editing ? 'Updated as you type' : 'As last saved'}>
           {live && live.errors.length === 0 && live.warnings.length === 0 && <p className="text-sm text-emerald-700">All checks pass.</p>}

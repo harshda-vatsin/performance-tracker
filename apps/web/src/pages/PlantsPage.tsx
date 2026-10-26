@@ -15,7 +15,7 @@ export function PlantsPage() {
   const { can } = useAuth();
   const toast = useToast();
   const [sp, setSp] = useSearchParams();
-  // Roles such as the MD can read months and scores but not the org tree, so the plant list falls back to the
+  // Roles such as Management can read months and scores but not the org tree, so the plant list falls back to the
   // management dashboard, which already lists the plants in the caller's scope.
   const orgs = useAsync(async (): Promise<{ id: string; name: string }[]> => {
     if (can('org:read')) return (await get<{ units: OrgUnit[] }>('/org/units')).units.filter((u) => u.unitType === 'PLANT');

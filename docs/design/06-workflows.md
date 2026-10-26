@@ -16,10 +16,10 @@ stateDiagram-v2
   APPROVED --> LOCKED : Co-HR processes and locks
   APPROVED --> REJECTED : Co-HR returns with comment
   LOCKED --> BONUS_CALCULATED : Co-HR runs bonus calculation
-  BONUS_CALCULATED --> RELEASED : Co-HR Head releases to payroll
+  BONUS_CALCULATED --> RELEASED : a second Corporate HR user releases to payroll
   BONUS_CALCULATED --> LOCKED : Batch discarded for recalculation
-  LOCKED --> REOPENED : Reopen approved by Co-HR Head
-  BONUS_CALCULATED --> REOPENED : Reopen approved by Co-HR Head
+  LOCKED --> REOPENED : Reopen approved by a different Corporate HR user
+  BONUS_CALCULATED --> REOPENED : Reopen approved by a different Corporate HR user
   REOPENED --> SUBMITTED : Plant HR resubmits corrected data
   RELEASED --> [*]
 ```
@@ -37,8 +37,8 @@ stateDiagram-v2
 | APPROVED → LOCKED | CHR·C | Actor not in earlier chain; no open validation flags without acknowledgement | optional | Create OFFICIAL calc run, write scores, refresh `SCORE_ROLLUP`, freeze inputs |
 | APPROVED → REJECTED | CHR·C | n/a | **mandatory** | Notify Plant HR |
 | LOCKED → BONUS_CALCULATED | CHR·C | Salary-structure and attendance sheets present for the plant | n/a | Create payroll batch in `pay` schema with payouts |
-| BONUS_CALCULATED → RELEASED | CHR-H·C | Preparer ≠ releaser; step-up auth | optional | Generate file, SHA-256, notify Plant HR and Plant Head |
-| LOCKED / BONUS_CALCULATED → REOPENED | CHR-H·C (after request by CHR or PH) | Not RELEASED; reason + scope of change | **mandatory** | Supersede OFFICIAL run, delete unreleased batch, notify chain |
+| BONUS_CALCULATED → RELEASED | CHR·C (not the preparer) | Preparer ≠ releaser; step-up auth | optional | Generate file, SHA-256, notify Plant HR and Plant Head |
+| LOCKED / BONUS_CALCULATED → REOPENED | CHR·C (a different user from the requester; request by CHR or PH) | Not RELEASED; reason + scope of change | **mandatory** | Supersede OFFICIAL run, delete unreleased batch, notify chain |
 | REOPENED → SUBMITTED | PHR·P | Changed rows carry comments | **mandatory** | Verification and approval repeat for the changed units |
 
 ### Rules
@@ -59,10 +59,10 @@ stateDiagram-v2
 |---|---|---|---|
 | Plant HR submits | WD 3 | WD 2 (to PHR) and on the day | WD 4: notify Plant Head; WD 5: notify Co-HR |
 | HOD verifies | WD 4 | On receipt, then day before | +1 day: Plant Head; +2 days: Co-HR |
-| Plant Head approves | WD 5 | On receipt, then day before | +1 day: Co-HR; +2 days: MD digest |
-| Co-HR processes and locks | WD 7 | Day before | Digest to Co-HR Head |
-| Bonus calculation | WD 8 | n/a | Digest to Co-HR Head |
-| Payroll release | WD 10 | Day before | MD digest |
+| Plant Head approves | WD 5 | On receipt, then day before | +1 day: Co-HR; +2 days: Management digest |
+| Co-HR processes and locks | WD 7 | Day before | Digest to Corporate HR |
+| Bonus calculation | WD 8 | n/a | Digest to Corporate HR |
+| Payroll release | WD 10 | Day before | Management digest |
 
 - A scheduled worker job evaluates deadlines hourly (IST) and writes to the notification outbox.
 - Holiday calendars per plant; deadlines skip non-working days.
@@ -83,18 +83,18 @@ stateDiagram-v2
   IN_PROGRESS --> QUARTER_REVIEW : Quarter closes
   QUARTER_REVIEW --> IN_PROGRESS : Reviewer signs Q1 to Q3
   QUARTER_REVIEW --> YEAR_END_REVIEW : Reviewer signs Q4
-  YEAR_END_REVIEW --> FINALISED : Plant Head or MD signs off
-  FINALISED --> YEAR_END_REVIEW : Reopen approved by Co-HR Head
+  YEAR_END_REVIEW --> FINALISED : Plant Head or Management signs off
+  FINALISED --> YEAR_END_REVIEW : Reopen approved by a different Corporate HR user
   FINALISED --> [*]
 ```
 
 | Step | Actor | Notes |
 |---|---|---|
-| Goal setting | Manager (HOD·T, PH·P, MD·T for direct reports); Co-HR can seed from a **senior-role template** | KRAs and KPIs each with unit, direction, present level, Q1–Q4 targets, weightage. KRA weights total 100; KPI weights total 100 within each KRA. |
-| Acknowledgement | Employee (SEN·S) | Acknowledge or dispute with comment; the acknowledgement timestamp and version are stored. |
+| Goal setting | Manager (HOD·T, PH·P, MGMT·T for direct reports); Co-HR can seed from a **senior-role template** | KRAs and KPIs each with unit, direction, present level, Q1–Q4 targets, weightage. KRA weights total 100; KPI weights total 100 within each KRA. |
+| Acknowledgement | Employee (EMP·S) | Acknowledge or dispute with comment; the acknowledgement timestamp and version are stored. |
 | Monthly result entry | Employee drafts (optional), manager enters or confirms; reviewer verifies | Same scoring engine (B, cap, floor configurable for Module A as its own rule scope `SENIOR`). |
 | Quarterly / yearly | Roll-up: KPI scores → KRA score (weighted) → total (weighted) → quarter average → year | Rating bands and increment guidelines are config. |
-| Sign-off | Reviewer (REV·As), then Plant Head or MD | Final rating locks the cycle. |
+| Sign-off | Assigned reviewer (an HOD / Manager, Plant Head or Management user, `·As`), then Plant Head or Management | Final rating locks the cycle. |
 
 ### Mid-year joiners, transfers, role changes
 
@@ -109,9 +109,9 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
   autonumber
-  actor R as Requester (Co-HR or Plant Head)
+  actor R as Requester (Corporate HR or Plant Head)
   participant S as System
-  actor H as Co-HR Head
+  actor H as Approver (a different Corporate HR user)
   participant P as Plant HR
   R->>S: Request reopen with reason and scope (units, months)
   S->>H: Notify, show impact preview (affected employees, payouts)

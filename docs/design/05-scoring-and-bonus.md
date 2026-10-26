@@ -106,7 +106,7 @@ These become the first rows of the **golden test suite**; the client's real Exce
 - Rule sets are **immutable and versioned**; activation is maker-checker (doc 04) with an `effective_from` month.
 - Each `CALC_RUN` stores `scoring_rule_set_id`, `engine_version` and an `input_hash` (SHA-256 of canonicalised inputs), so a run is reproducible and tamper-evident.
 - **Recalculating a past month** always selects the rule version in force for that month, so results change only if inputs change.
-- Applying new rules retroactively is a separate, explicit "re-base" action: needs a reason, CHR-H approval, creates new OFFICIAL runs, and, if the month was released to payroll, an adjustment batch.
+- Applying new rules retroactively is a separate, explicit "re-base" action: needs a reason, approval by a different Corporate HR user, creates new OFFICIAL runs, and, if the month was released to payroll, an adjustment batch.
 - The engine is semantically versioned; changing its behaviour requires a new `engine_version` and regression run against the golden suite.
 
 ### 1.9 Performance
@@ -187,7 +187,7 @@ Every `PAYOUT` row stores `explanation`: the matched rule, band, eligibility res
 
 1. **Calculate** (Co-HR): produces `PAYROLL_BATCH` (state `CALCULATED`) per plant-month with all payouts; the system shows exceptions (no score, no base, ineligible).
 2. **Review**: Co-HR compares to last month (variance report); can exclude individuals with reason.
-3. **Release** (Co-HR Head, step-up auth): batch becomes `RELEASED`, locked, the file is generated, SHA-256 is stored and a consolidated all-plant file can be produced.
+3. **Release** (a different Corporate HR user, step-up auth): batch becomes `RELEASED`, locked, the file is generated, SHA-256 is stored and a consolidated all-plant file can be produced.
 4. **After release**, nothing is edited. Corrections create an `ADJUSTMENT` batch (positive or negative deltas) referencing the original, with the same approval.
 
 ### 2.6 Integration point (future)

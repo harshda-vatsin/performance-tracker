@@ -6,7 +6,10 @@ import { authenticate, login, logout, type AuthContext } from './auth/service.js
 import { config } from './config.js';
 import { dbErrorResponse } from './http.js';
 import { hasAnyScope, scopeCovers, scopeFor } from './rbac/policy.js';
+import { appraisalRoutes } from './routes/appraisals.js';
+import { auditLogRoutes } from './routes/audit-log.js';
 import { configRoutes } from './routes/config.js';
+import { myScoresRoutes } from './routes/my-scores.js';
 import { employeeRoutes } from './routes/employees.js';
 import { kpiRoutes } from './routes/kpi.js';
 import { orgRoutes } from './routes/org.js';
@@ -61,6 +64,16 @@ export function buildApp(pool: pg.Pool): FastifyInstance {
     }
   };
 
+  /** Own-records guard: the permission must come from a SELF-scoped assignment (the Employee role). */
+  const requireSelf = (permission: string) => async (req: FastifyRequest, reply: FastifyReply) => {
+    const denied = await requireAuth(req, reply);
+    if (denied) return denied;
+    if (!req.auth!.assignments.some((a) => a.scopeType === 'SELF' && a.permissions.includes(permission))) {
+      await audit(pool, { actorId: req.auth!.userId, action: 'ACCESS_DENIED', entityType: 'permission', entityId: permission, ip: req.ip });
+      return reply.code(403).send({ error: 'FORBIDDEN' });
+    }
+  };
+
   app.post('/auth/login', async (req, reply) => {
     const body = req.body as { loginId?: unknown; password?: unknown } | null;
     if (typeof body?.loginId !== 'string' || typeof body?.password !== 'string') {
@@ -96,9 +109,10 @@ export function buildApp(pool: pg.Pool): FastifyInstance {
     return {
       user: { userId: a.userId, loginId: a.loginId, fullName: a.fullName },
       roles: a.assignments.map((r) => ({ code: r.roleCode, scopeType: r.scopeType, scopePath: r.scopePath })),
-      // Only permissions the caller can exercise: an assignment with no company or org-unit scope (SELF / ASSIGNED) grants
-      // nothing the server's scope checks would accept, so it must not light up screens that can only answer 403.
-      permissions: [...new Set(a.assignments.filter((r) => r.scopeType === 'COMPANY' || r.scopePath).flatMap((r) => r.permissions))].sort(),
+      // Only permissions the caller can exercise: an assignment with no company, org-unit or SELF scope grants nothing the
+      // server's scope checks would accept, so it must not light up screens that can only answer 403. SELF is real for
+      // the Employee role, whose only permission is myscores:read, served by requireSelf.
+      permissions: [...new Set(a.assignments.filter((r) => r.scopeType === 'COMPANY' || r.scopeType === 'SELF' || r.scopePath).flatMap((r) => r.permissions))].sort(),
     };
   });
 
@@ -161,6 +175,7 @@ export function buildApp(pool: pg.Pool): FastifyInstance {
   const guards: Guards = {
     requireAuth,
     requirePermission,
+    requireSelf,
     canAtUnit: async (auth, permission, orgUnitId) => {
       const scope = scopeFor(auth.assignments, permission);
       if (scope.company) return true;
@@ -178,6 +193,9 @@ export function buildApp(pool: pg.Pool): FastifyInstance {
   scorecardChangeRoutes(app, pool, guards);
   dashboardRoutes(app, pool, guards);
   submissionRoutes(app, pool, guards);
+  appraisalRoutes(app, pool, guards);
+  myScoresRoutes(app, pool, guards);
+  auditLogRoutes(app, pool, guards);
 
   return app;
 }

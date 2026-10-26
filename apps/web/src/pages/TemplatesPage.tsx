@@ -40,7 +40,7 @@ export function TemplatesPage() {
             <ErrorBox onRetry={list.reload}>{list.error}</ErrorBox>
           </div>
         ) : !list.data?.templates.length ? (
-          <Empty title="No templates yet" hint={can('templates:write') ? 'Create a draft template for a plant type to get started.' : 'Corporate HR creates templates; a Co-HR Head approves them.'} />
+          <Empty title="No templates yet" hint={can('templates:write') ? 'Create a draft template for a plant type to get started.' : 'Corporate HR creates templates; a different Corporate HR user approves them.'} />
         ) : (
           <TableWrap>
             <table className="w-full min-w-[640px]">

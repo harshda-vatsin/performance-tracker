@@ -46,7 +46,7 @@ beforeAll(async () => {
 
   await env.user('E1002', 'PHR', 'PLANT', ids.p1);
   await env.user('E1003', 'CHR');
-  await env.user('E1004', 'CHR_H');
+  await env.user('E1004', 'CHR'); // second Corporate HR user: approves what E1003 authors
   await env.user('E1005', 'PH', 'PLANT', ids.p1);
   await env.user('E1007', 'HOD', 'DEPARTMENT', ids.d1);
   await env.user('E1008', 'HOD', 'DEPARTMENT', ids.d1b);

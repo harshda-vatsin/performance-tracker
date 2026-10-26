@@ -58,7 +58,7 @@ Config is per environment via IaC variables and the secret manager; same contain
 3. Auto-deploy to UAT; smoke tests.
 4. Manual approval (two approvers) → production, blue/green or rolling with health checks; automatic rollback on failed readiness.
 5. **Database migrations**: forward-only, backwards-compatible (expand → migrate → contract), run as a separate job before app rollout; destructive migrations need an explicit approval.
-6. **Release calendar rule**: no production deployments during the month-end processing window (WD 1–10), except hot-fixes approved by Co-HR Head and engineering lead.
+6. **Release calendar rule**: no production deployments during the month-end processing window (WD 1–10), except hot-fixes approved by Corporate HR and engineering lead.
 
 ## 4. Capacity
 
@@ -113,4 +113,4 @@ Small: ~4 container instances, one managed Postgres with standby, storage, CDN/W
 
 Nightly: audit-chain verification, session cleanup, expired-OTP purge, backup verification report.
 Monthly: deadline calendar generation, retention enforcement, preview-calc pruning.
-Quarterly: restore test, access recertification (list of all role assignments for Co-HR Head and department heads to confirm or revoke).
+Quarterly: restore test, access recertification (list of all role assignments for Corporate HR and department heads to confirm or revoke).

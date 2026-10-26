@@ -145,7 +145,7 @@ sequenceDiagram
   API-->>SPA: 200; notify user by SMS/email "password changed"
 ```
 
-**Admin-assisted reset:** Co-HR (not Super Admin) can trigger a reset for a user who lost their mobile. The flow issues a one-time temporary credential delivered to the **reporting manager and the user's registered email**, requires `must_change` on first login, and records both actor and approver in the audit log. Super Admin can disable/enable accounts and revoke sessions but not read or set passwords.
+**Admin-assisted reset:** Corporate HR (not Admin) can trigger a reset for a user who lost their mobile. The flow issues a one-time temporary credential delivered to the **reporting manager and the user's registered email**, requires `must_change` on first login, and records both actor and approver in the audit log. Admin can disable/enable accounts and revoke sessions but not read or set passwords.
 
 ## 7. Session and device management
 

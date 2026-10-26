@@ -32,7 +32,7 @@ An enterprise web portal that replaces plant-wise Excel "PMS" sheets for ~5,000 
 6. **Immutable snapshots at submission.** A monthly submission points at an immutable scorecard version (targets, present levels, weights), so later template or target edits cannot change history.
 7. **Permissions = role × scope.** Scope is resolved from the org tree (company, plant, department, cell) plus self and team (reporting line). It is enforced in three layers: API guard, scoped repository queries, and Postgres RLS.
 8. **Maker-checker is enforced by the database** (constraint triggers), not only by UI logic. Every monthly submission and every rule change needs two different people.
-9. **Pay data is segregated** in its own schema and DB role with its own permission. Super Admin has no pay access by default.
+9. **Pay data is segregated** in its own schema and DB role with its own permission. Admin has no pay access by default.
 10. **Released payroll is never edited.** Corrections after release become signed adjustment batches. Corrections before release go through a controlled, audited reopen.
 
 ## 3. Assumptions (confirm with client; each has a matching question in doc 12)

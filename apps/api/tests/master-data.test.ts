@@ -13,10 +13,10 @@ let hod1: string | undefined;
 beforeAll(async () => {
   env = await setupEnv();
   const { user, ids } = env;
-  await user('E1001', 'SA');
+  await user('E1001', 'ADMIN');
   await user('E1002', 'PHR', 'PLANT', ids.p1);
   await user('E1003', 'CHR');
-  await user('E1004', 'CHR_H');
+  await user('E1004', 'CHR'); // second Corporate HR user: approves what E1003 authors
   await user('E1006', 'CHR'); // second template author
   await user('E1007', 'HOD', 'DEPARTMENT', ids.d1);
 
@@ -206,7 +206,10 @@ describe('KRA templates', () => {
 
   it('only the author edits a draft, and only an approver (not the author) activates it', async () => {
     expect((await env.put(`/templates/${v1}/kras`, { kras: validKras() }, chr2)).statusCode).toBe(403);
-    expect((await env.post(`/templates/${v1}/activate`, {}, chr)).statusCode).toBe(403);
+    // Corporate HR now holds both write and approve, so the author is stopped by maker <> checker, not by a missing permission.
+    const selfApprove = await env.post(`/templates/${v1}/activate`, {}, chr);
+    expect(selfApprove.statusCode).toBe(409);
+    expect(selfApprove.json().error).toMatch(/^SOD: the author of a template cannot approve it/);
     expect((await env.post(`/templates/${v1}/activate`, {}, phr1)).statusCode).toBe(403);
 
     const activated = await env.post(`/templates/${v1}/activate`, {}, chrH);

@@ -6,6 +6,8 @@ export type Guard = (req: FastifyRequest, reply: FastifyReply) => Promise<unknow
 export interface Guards {
   requireAuth: Guard;
   requirePermission: (permission: string) => Guard;
+  /** For own-records endpoints: authenticated and holding `permission` through a SELF-scoped assignment. */
+  requireSelf: (permission: string) => Guard;
   /** True when the caller's scope for `permission` covers the org unit (checked against its ltree path). */
   canAtUnit: (auth: AuthContext, permission: string, orgUnitId: string) => Promise<boolean>;
 }
