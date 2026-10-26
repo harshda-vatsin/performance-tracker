@@ -14,6 +14,8 @@ import { PlantsPage } from './pages/PlantsPage';
 import { ReopenPage } from './pages/ReopenPage';
 import { ScorecardDetailPage } from './pages/ScorecardDetailPage';
 import { ScorecardsPage } from './pages/ScorecardsPage';
+import { AppraisalBoardPage, MyGoalsPage, ReviewQueuePage, TeamGoalsPage } from './pages/SeniorLists';
+import { SeniorCyclePage } from './pages/SeniorCyclePage';
 import { SubmissionPage } from './pages/SubmissionPage';
 import { SubmissionsPage } from './pages/SubmissionsPage';
 import { UnitTrendPage } from './pages/UnitTrendPage';
@@ -41,6 +43,7 @@ export function Gate({ perm, children }: { perm: string | string[]; children: Re
 }
 
 export function App() {
+  const { can } = useAuth();
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -69,6 +72,11 @@ export function App() {
         <Route path="audit" element={<Gate perm={AUDIT_PERMS}><AuditLogPage /></Gate>} />
         <Route path="my-results" element={<Gate perm="myscores:read"><MyResultsPage /></Gate>} />
         <Route path="appraisals" element={<Gate perm="appraisals:read"><AppraisalsPage /></Gate>} />
+        <Route path="senior/mine" element={<Gate perm="senior:own"><MyGoalsPage /></Gate>} />
+        <Route path="senior/team" element={<Gate perm="senior:manage"><TeamGoalsPage /></Gate>} />
+        <Route path="senior/review" element={<Gate perm="senior:review"><ReviewQueuePage /></Gate>} />
+        <Route path="senior/board" element={<Gate perm="senior:read_all"><AppraisalBoardPage canCreate={can('senior:hr')} /></Gate>} />
+        <Route path="senior/:id" element={<Gate perm={['senior:own', 'senior:manage', 'senior:review', 'senior:read_all']}><SeniorCyclePage /></Gate>} />
         <Route path="*" element={<Empty title="Page not found" hint="Use the menu on the left." />} />
       </Route>
     </Routes>

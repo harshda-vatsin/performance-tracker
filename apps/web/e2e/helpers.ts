@@ -29,7 +29,7 @@ export const USERS = [
   ['E0001', 'ADMIN'], ['E0002', 'MGMT'], ['E0003', 'CHR'], ['E0004', 'CHR'], ['E0005', 'EMP'],
   ['E0101', 'PHR'], ['E0102', 'PH'], ['E0103', 'HOD'], ['E0104', 'HOD'], ['E0105', 'EMP'], ['E0106', 'EMP'], ['E0107', 'EMP'],
   ['E0201', 'PHR'], ['E0202', 'PH'], ['E0203', 'HOD'], ['E0204', 'HOD'], ['E0205', 'EMP'], ['E0206', 'EMP'],
-  ['E0301', 'PHR'], ['E0302', 'EMP'],
+  ['E0301', 'PHR'], ['E0302', 'EMP'], ['E0303', 'HOD'], ['E0108', 'EMP'],
 ] as const;
 
 export async function login(page: Page, code: string): Promise<void> {

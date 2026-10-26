@@ -18,6 +18,8 @@ export const setUnauthenticatedHandler = (fn: () => void) => {
 /** Plain-language text for the error codes the API can return (never shows raw codes to users when avoidable). */
 export function describeError(status: number, body: Record<string, any>): string {
   const code: string = body.error ?? 'ERROR';
+  // Senior-staff errors (SENIOR_WRONG_STATE, SENIOR_INCOMPLETE ...) carry a sentence written for the user.
+  if (code.startsWith('SENIOR_') && typeof body.message === 'string') return body.message;
   switch (code) {
     case 'BAD_REQUEST':
       return body.message ?? 'The request was not valid.';
