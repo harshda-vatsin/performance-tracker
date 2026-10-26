@@ -22,6 +22,11 @@ export function fiscalMonths(fy: number): string[] {
   });
 }
 
+export function daysIn(period: string): number {
+  const [y, m] = period.split('-').map(Number);
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
 export const isPeriod = (v: string) => /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
 
 /** The month before today: the usual one being worked on. */

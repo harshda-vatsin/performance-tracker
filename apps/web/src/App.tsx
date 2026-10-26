@@ -3,7 +3,16 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import { Layout } from './components/Layout';
 import { Empty, Loading } from './components/ui';
+import { AdminUsersPage } from './pages/AdminUsersPage';
 import { EmployeesPage } from './pages/EmployeesPage';
+import { ManagementPage } from './pages/ManagementPage';
+import { PlantsPage } from './pages/PlantsPage';
+import { ReopenPage } from './pages/ReopenPage';
+import { ScorecardDetailPage } from './pages/ScorecardDetailPage';
+import { ScorecardsPage } from './pages/ScorecardsPage';
+import { SubmissionPage } from './pages/SubmissionPage';
+import { SubmissionsPage } from './pages/SubmissionsPage';
+import { UnitTrendPage } from './pages/UnitTrendPage';
 import { HomePage } from './pages/HomePage';
 import { KpisPage } from './pages/KpisPage';
 import { LoginPage } from './pages/LoginPage';
@@ -44,6 +53,15 @@ export function App() {
         <Route path="kpis" element={<Gate perm="kpi:read"><KpisPage /></Gate>} />
         <Route path="templates" element={<Gate perm="templates:read"><TemplatesPage /></Gate>} />
         <Route path="templates/:id" element={<Gate perm="templates:read"><TemplateDetailPage /></Gate>} />
+        <Route path="scorecards" element={<Gate perm="scorecards:read"><ScorecardsPage /></Gate>} />
+        <Route path="scorecards/:id" element={<Gate perm="scorecards:read"><ScorecardDetailPage /></Gate>} />
+        <Route path="submissions" element={<Gate perm="submissions:read"><SubmissionsPage /></Gate>} />
+        <Route path="submissions/:id" element={<Gate perm="submissions:read"><SubmissionPage /></Gate>} />
+        <Route path="plants" element={<Gate perm="submissions:read"><PlantsPage /></Gate>} />
+        <Route path="reopen" element={<Gate perm="submissions:read"><ReopenPage /></Gate>} />
+        <Route path="dashboards/unit" element={<Gate perm="scores:read"><UnitTrendPage /></Gate>} />
+        <Route path="dashboards/management" element={<Gate perm="scores:read"><ManagementPage /></Gate>} />
+        <Route path="admin/users" element={<Gate perm="users:manage"><AdminUsersPage /></Gate>} />
         <Route path="*" element={<Empty title="Page not found" hint="Use the menu on the left." />} />
       </Route>
     </Routes>
