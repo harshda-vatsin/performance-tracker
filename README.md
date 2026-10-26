@@ -8,7 +8,7 @@ Replaces MM Forgings Ltd's plant-wise Excel PMS sheets with an auditable web por
 |---|---|
 | `apps/demo` | The original clickable, front-end-only demo (mock data, no login). Kept as a UX reference. |
 | `apps/api` | Fastify + `pg` API: login, sessions, RBAC, audit log. SQL migrations in `apps/api/migrations`. |
-| `apps/web` | React + Vite portal (role-aware shell, master data, monthly entry and workflow, dashboards). Playwright end-to-end specs in `apps/web/e2e`. |
+| `apps/web` | React + Vite portal (role-aware shell, master data, monthly entry and workflow, dashboards, and the senior-staff screens: My goals, Team goals, Review queue, Appraisal board). Playwright end-to-end specs in `apps/web/e2e`. |
 | `packages/scoring` | `@mmf/scoring`: pure scoring engine, tested against the worked examples in doc 05. |
 | `docs/design` | System design (architecture, data model, auth, RBAC, scoring, workflows, plan). |
 

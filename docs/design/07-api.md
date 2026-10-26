@@ -63,13 +63,19 @@
 | GET `/employees/{id}/scores?fy=` | Individual history |
 
 ### Module A: senior staff
+A cycle is anchored on the `appraisal` (employee, fiscal year, assigned reviewer) and adds the manager (an HOD), the goal sheet, the monthly results and the year-end chain. Implemented as built; mid-year segments, quarter sign-off and reopen are not built yet.
+
 | Method · Path | Purpose |
 |---|---|
-| GET/POST `/kra-cycles?fy=&employee=` | Cycle per employee |
-| PUT `/kra-cycles/{id}/segments/{sid}/kras` | Author KRAs/KPIs |
-| POST `/kra-cycles/{id}/transitions` | `ISSUE`, `ACKNOWLEDGE`, `DISPUTE`, `SIGN_QUARTER`, `FINALISE`, `REOPEN` |
-| PUT `/kra-cycles/{id}/results?period=` | Monthly KPI results |
-| GET `/kra-cycles/{id}/scorecard` | Computed KPI/KRA/total scores |
+| GET `/senior/cycles?view=mine\|team\|review\|all&fy=&state=` | List: own goal sheets, people I manage, appraisals I review, or the company board (needs `senior:own` / `manage` / `review` / `read_all`) |
+| POST `/senior/cycles` | Corporate HR starts a cycle: `{ employeeId, fiscalYear, managerUserId, reviewerUserId? }`; reuses or creates the appraisal |
+| GET `/senior/cycles/{id}` | Goal sheet, months, roll-up, assessments, history, and the actions the caller may take now |
+| PUT `/senior/cycles/{id}/goals` | Replace the draft goal sheet (KRAs with KPIs); weights are checked when issued |
+| POST `/senior/cycles/{id}/transitions` | `issue`, `acknowledge`, `dispute`, `open_appraisal`, `submit_self`, `submit_manager`, `sign_off`, `finalise`, `send_back` (send-back and dispute need a comment) |
+| PUT `/senior/cycles/{id}/results/{period}` | Manager enters a month's KPI results (or N/A with a reason) |
+| POST `/senior/cycles/{id}/months/{period}/confirm` | Score the month with the existing formula and lock it |
+| PUT `/senior/cycles/{id}/assessment` | Save the caller's self / manager assessment draft |
+| GET `/senior/people` · `/senior/config` | Pickers for the new-cycle form · scoring parameters and rating bands |
 
 ### Variable pay (`pay` schema; requires `pay:read` etc.)
 | Method · Path | Purpose |
