@@ -212,7 +212,7 @@ export function SubmissionPage() {
 
         <Card title="Results" subtitle="Enter this month's result for each KRA, or mark it N/A with a reason." pad={false}>
           <TableWrap>
-            <table className="w-full min-w-[900px]" aria-label="Monthly results">
+            <table className="stack-table w-full md:min-w-[900px]" aria-label="Monthly results">
               <thead>
                 <tr>
                   <th className="th">Cat</th>
@@ -236,15 +236,18 @@ export function SubmissionPage() {
                       <td className="td">
                         <Chip tone="accent">{r.pqcdsm}</Chip>
                       </td>
-                      <td className="td min-w-[180px]">
-                        <div className="font-medium text-slate-900">{r.nameEn}</div>
-                        <div className="muted">
-                          {r.unit} · {r.direction === 'HIGHER_BETTER' ? 'higher' : 'lower'} is better
+                      <td className="td md:min-w-[180px]">
+                        <div className="stack-value">
+                          <div className="font-medium text-slate-900">{r.nameEn}</div>
+                          <div className="muted">
+                            {r.unit} · {r.direction === 'HIGHER_BETTER' ? 'higher' : 'lower'} is better
+                          </div>
                         </div>
                       </td>
-                      <td className="td tabular-nums">{fmtNumber(r.presentLevel)}</td>
-                      <td className="td tabular-nums">{fmtNumber(r.target)}</td>
-                      <td className="td">
+                      <td className="td tabular-nums" data-label="Present">{fmtNumber(r.presentLevel)}</td>
+                      <td className="td tabular-nums" data-label="Target">{fmtNumber(r.target)}</td>
+                      <td className="td" data-label="Result">
+                        <div className="stack-value">
                         {editable ? (
                           <input
                             className={`input !w-28 text-right tabular-nums ${issue?.blocking ? 'input-invalid' : ''}`}
@@ -263,8 +266,10 @@ export function SubmissionPage() {
                             {issue.text}
                           </p>
                         )}
+                        </div>
                       </td>
-                      <td className="td">
+                      <td className="td" data-label="N/A">
+                        <div className="stack-value">
                         {editable ? (
                           <div className="space-y-1">
                             <input type="checkbox" aria-label={`N/A for ${r.nameEn}`} checked={e.na} onChange={(ev) => set(r.kraId, { na: ev.target.checked, ...(ev.target.checked ? { result: '' } : {}) })} />
@@ -275,11 +280,14 @@ export function SubmissionPage() {
                         ) : (
                           '—'
                         )}
+                        </div>
                       </td>
-                      <td className="td min-w-[180px]">
-                        {editable ? <input className="input" aria-label={`Comment for ${r.nameEn}`} value={e.remarks} onChange={(ev) => set(r.kraId, { remarks: ev.target.value })} /> : <span className="text-sm">{e.remarks || '—'}</span>}
+                      <td className="td md:min-w-[180px]" data-label="Comment">
+                        <div className="stack-value">
+                          {editable ? <input className="input" aria-label={`Comment for ${r.nameEn}`} value={e.remarks} onChange={(ev) => set(r.kraId, { remarks: ev.target.value })} /> : <span className="text-sm">{e.remarks || '—'}</span>}
+                        </div>
                       </td>
-                      <td className="td tabular-nums">{score ? fmtScore(score.final) : '—'}</td>
+                      <td className="td tabular-nums" data-label={preview.data?.official ? 'Score' : 'Preview'}>{score ? fmtScore(score.final) : '—'}</td>
                     </tr>
                   );
                 })}
@@ -288,7 +296,8 @@ export function SubmissionPage() {
           </TableWrap>
         </Card>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        {/* grid-cols-1 is minmax(0,1fr): without it the single phone column grows to the widest table inside it. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 [&>*]:min-w-0">
           <ScoresCard preview={preview.data} official={official.data} />
           <PeopleCard detail={d} editable={editable} levelCodes={levelCodes} period={sub.period} subId={id} onSaved={() => { detail.reload(); preview.reload(); }} />
         </div>
@@ -329,7 +338,7 @@ function ScoresCard({ preview, official }: { preview?: Preview; official?: Offic
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="level-scores">
             {levels.map((l) => (
               <div key={l.levelCode} className="rounded-md border border-slate-200 px-3 py-2" data-testid={`level-${l.levelCode}`}>
-                <div className="muted">{l.levelCode}</div>
+                <div className="muted break-words">{l.levelCode}</div>
                 <div className="text-xl font-semibold tabular-nums text-slate-900">{fmtScore(l.score)}</div>
               </div>
             ))}
@@ -424,7 +433,7 @@ function PeopleCard({ detail, editable, levelCodes, period, subId, onSaved }: { 
         <Empty title="No active employees are assigned to this unit" hint="Add or transfer employees on the Employees screen." />
       ) : (
         <TableWrap>
-          <table className="w-full" aria-label="People and levels">
+          <table className="stack-table w-full" aria-label="People and levels">
             <thead>
               <tr>
                 <th className="th" />
@@ -446,14 +455,14 @@ function PeopleCard({ detail, editable, levelCodes, period, subId, onSaved }: { 
                     <td className="td">
                       {p.fullName} <span className="muted">{p.employeeCode}</span>
                     </td>
-                    <td className="td">
+                    <td className="td" data-label="Level">
                       <select className="input !w-auto" aria-label={`Level for ${p.fullName}`} value={r.level} disabled={!r.on} onChange={(e) => setRows({ ...rows, [p.id]: { ...r, level: e.target.value } })}>
                         {levelCodes.map((l) => (
                           <option key={l}>{l}</option>
                         ))}
                       </select>
                     </td>
-                    <td className="td">
+                    <td className="td" data-label="Days">
                       <input className={`input !w-20 ${badDays ? 'input-invalid' : ''}`} aria-label={`Days for ${p.fullName}`} disabled={!r.on} value={r.days} onChange={(e) => setRows({ ...rows, [p.id]: { ...r, days: e.target.value } })} />
                     </td>
                   </tr>
