@@ -16,9 +16,11 @@ import { orgRoutes } from './routes/org.js';
 import { dashboardRoutes } from './routes/dashboards.js';
 import { scorecardChangeRoutes } from './routes/scorecard-changes.js';
 import { scorecardRoutes } from './routes/scorecards.js';
+import { seniorRoutes } from './routes/senior.js';
 import { submissionRoutes } from './routes/submissions.js';
 import { templateRoutes } from './routes/templates.js';
 import type { Guards } from './routes/types.js';
+import { SeniorError } from './senior/service.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -34,6 +36,7 @@ export function buildApp(pool: pg.Pool): FastifyInstance {
 
   // Constraint and guard-trigger violations become 4xx; anything unexpected is a generic 500 (no internals leaked).
   app.setErrorHandler((err: Error & { statusCode?: number }, _req, reply) => {
+    if (err instanceof SeniorError) return reply.code(err.status).send({ error: err.code, message: err.message });
     const mapped = dbErrorResponse(err);
     if (mapped) return reply.code(mapped.status).send(mapped.body);
     if (err.statusCode && err.statusCode < 500) return reply.code(err.statusCode).send({ error: 'BAD_REQUEST' });
@@ -193,6 +196,7 @@ export function buildApp(pool: pg.Pool): FastifyInstance {
   scorecardChangeRoutes(app, pool, guards);
   dashboardRoutes(app, pool, guards);
   submissionRoutes(app, pool, guards);
+  seniorRoutes(app, pool, guards);
   appraisalRoutes(app, pool, guards);
   myScoresRoutes(app, pool, guards);
   auditLogRoutes(app, pool, guards);

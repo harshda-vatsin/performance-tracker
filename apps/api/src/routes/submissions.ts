@@ -8,7 +8,7 @@ import { daysInMonth, fiscalYearOf, isPeriod, quarterOf } from '../fiscal.js';
 import { scopeFor } from '../rbac/policy.js';
 import { computeMonth, ENGINE_VERSION, hashInputs, resolveParams, type ResultRow, type Stint } from '../scoring/monthly.js';
 import type { Guards } from './types.js';
-import { asObject, bad, finite, str } from './util.js';
+import { asObject, bad, finite, str, unitProblem } from './util.js';
 
 type State = 'DRAFT' | 'SUBMITTED' | 'VERIFIED' | 'APPROVED' | 'REJECTED' | 'LOCKED' | 'REOPENED';
 
@@ -50,13 +50,6 @@ const ACTIONS: Record<string, { from: State[]; to: State; perm: (from: State) =>
   },
   resume: { from: ['REJECTED'], to: 'DRAFT', perm: () => 'submissions:enter' },
 };
-
-/** Unit sanity (doc 05 §1.7 rule 3). Returns a problem or null. */
-function unitProblem(unit: string, value: number): string | null {
-  if (unit === '%' && (value < 0 || value > 100)) return 'a percentage must be between 0 and 100';
-  if (unit === 'count' && (!Number.isInteger(value) || value < 0)) return 'a count must be a whole number, zero or more';
-  return null;
-}
 
 export function submissionRoutes(app: FastifyInstance, pool: pg.Pool, g: Guards): void {
   async function loadSub(id: string): Promise<Sub | undefined> {

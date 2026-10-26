@@ -141,12 +141,12 @@ describe('authorisation (server-enforced)', () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
-  it('/me lists only permissions the caller can use, so an Employee is offered their own scores and nothing else', async () => {
+  it('/me lists only permissions the caller can use, so an Employee is offered their own records and nothing else', async () => {
     await user('E1090', 'EMP', 'SELF');
     const { cookie } = await loginAs('E1090');
     const me = (await get('/me', cookie)).json();
     expect(me.roles).toHaveLength(1);
-    expect(me.permissions).toEqual(['myscores:read']);
+    expect(me.permissions).toEqual(['myscores:read', 'senior:own']); // own scores and own goal sheet
     expect((await get('/org/units', cookie)).statusCode).toBe(403);
     expect((await get('/me/scores', cookie)).statusCode).toBe(200);
 

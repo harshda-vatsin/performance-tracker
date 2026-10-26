@@ -10,6 +10,7 @@ import { createUserAccount } from './auth/service.js';
 import { config } from './config.js';
 import { createPool, withTransaction } from './db.js';
 import { migrate } from './migrate.js';
+import { seedSeniorCycles } from './senior/seed.js';
 
 interface SeedUser {
   code: string;
@@ -46,6 +47,9 @@ const USERS: SeedUser[] = [
   // Plant 3: Viralimalai (Forge), for scope tests
   { code: 'E0301', name: 'Ramesh C (Plant HR, Viralimalai)', role: 'PHR', unit: 'VLM', scopeType: 'PLANT' },
   { code: 'E0302', name: 'Sangeetha D (Senior engineer)', role: 'EMP', scopeType: 'SELF' },
+  { code: 'E0303', name: 'Mohan S (HOD, Forge Shop 1)', role: 'HOD', unit: 'VLM-FS1', scopeType: 'DEPARTMENT' },
+  // Senior-staff track (Module A): a third senior employee. The sample cycles are built in senior/seed.ts.
+  { code: 'E0108', name: 'Anand R (Senior manager, Quality)', role: 'EMP', scopeType: 'SELF' },
 ];
 
 /** FY 2026-27 appraisals for the two senior engineers; the reviewer is an assignment, not a role. */
@@ -190,6 +194,7 @@ export async function seed(pool: pg.Pool): Promise<SeededLogin[] | null> {
     );
     await audit(pool, { actorId: hr, action: 'APPRAISAL_CREATED', entityType: 'appraisal', entityId: rows[0].id, after: { employeeCode: a.employee, fiscalYear: 2026, reviewer: a.reviewer } });
   }
+  await seedSeniorCycles(pool);
   return created;
 }
 

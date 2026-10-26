@@ -19,3 +19,10 @@ export function isoDate(v: unknown): string | null {
 }
 
 export const bad = (message: string) => ({ error: 'BAD_REQUEST', message });
+
+/** Unit sanity (doc 05 §1.7 rule 3). Returns a problem or null. */
+export function unitProblem(unit: string, value: number): string | null {
+  if (unit === '%' && (value < 0 || value > 100)) return 'a percentage must be between 0 and 100';
+  if (unit === 'count' && (!Number.isInteger(value) || value < 0)) return 'a count must be a whole number, zero or more';
+  return null;
+}

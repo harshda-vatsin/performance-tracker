@@ -41,11 +41,11 @@ describe('the seven roles', () => {
     expect(codes).toEqual(['ADMIN', 'CHR', 'EMP', 'HOD', 'MGMT', 'PH', 'PHR']);
   });
 
-  it('Corporate HR holds what Co-HR Head used to approve with, and Employee holds only its own scores', async () => {
+  it('Corporate HR holds what Co-HR Head used to approve with, and Employee holds only its own records (scores and goal sheet)', async () => {
     expect(await permissionsOf('CHR')).toEqual(
       expect.arrayContaining(['templates:write', 'templates:approve', 'reopen:request', 'reopen:approve', 'submissions:lock', 'audit:read_business', 'appraisals:assign']),
     );
-    expect(await permissionsOf('EMP')).toEqual(['myscores:read']);
+    expect(await permissionsOf('EMP')).toEqual(['myscores:read', 'senior:own']);
     expect(await permissionsOf('ADMIN')).toEqual(expect.arrayContaining(['users:manage', 'audit:read_system']));
   });
 
