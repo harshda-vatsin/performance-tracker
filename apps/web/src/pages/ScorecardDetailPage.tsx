@@ -26,7 +26,7 @@ export function ScorecardDetailPage() {
   if (sc.loading && !sc.data) return <Loading />;
   if (sc.error || !sc.data) return <ErrorBox onRetry={sc.reload}>{sc.error ?? 'Scorecard not found'}</ErrorBox>;
   const { scorecard, kras } = sc.data;
-  const codes = [...new Set(kras.flatMap((k) => Object.keys(k.weights)))];
+  const codes = [...new Set(kras.flatMap((k) => Object.keys(k.weights)))].sort();
   const byId = new Map(kras.map((k) => [k.id, k]));
 
   return (
@@ -131,24 +131,21 @@ export function ScorecardDetailPage() {
                   </div>
                   <p className="text-sm text-slate-700">{cr.reason}</p>
                   <ul className="space-y-1 text-sm text-slate-600">
-                    {cr.changes.map((c) => {
-                      const k = byId.get(c.kraId);
-                      return (
-                        <li key={c.kraId} className="flex flex-wrap items-center gap-1.5">
-                          <b className="text-slate-800">{k?.nameEn ?? 'KRA'}</b>
-                          {c.presentLevel !== undefined && (
-                            <span className="inline-flex items-center gap-1">
-                              present {k?.presentLevel} <ArrowRight size={12} /> {c.presentLevel}
-                            </span>
-                          )}
-                          {c.targets && (
-                            <span className="inline-flex items-center gap-1">
-                              targets {k?.targets.join('/')} <ArrowRight size={12} /> {c.targets.join('/')}
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
+                    {cr.changes.map((c) => (
+                      <li key={c.kraId} className="flex flex-wrap items-center gap-1.5">
+                        <b className="text-slate-800">{c.nameEn ?? byId.get(c.kraId)?.nameEn ?? 'A KRA'}</b>
+                        {c.presentLevel !== undefined && (
+                          <span className="inline-flex items-center gap-1">
+                            present {c.before?.presentLevel ?? '?'} <ArrowRight size={12} /> {c.presentLevel}
+                          </span>
+                        )}
+                        {c.targets && (
+                          <span className="inline-flex items-center gap-1">
+                            targets {c.before?.targets.join('/') ?? '?'} <ArrowRight size={12} /> {c.targets.join('/')}
+                          </span>
+                        )}
+                      </li>
+                    ))}
                   </ul>
                   {cr.decisionComment && <p className="muted">Decision note: {cr.decisionComment}</p>}
                 </li>

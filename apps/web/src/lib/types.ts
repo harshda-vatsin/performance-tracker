@@ -119,7 +119,8 @@ export interface ChangeRequest {
   id: string;
   effectivePeriod: string;
   reason: string;
-  changes: { kraId: string; presentLevel?: number; targets?: number[] }[];
+  /** `nameEn` and `before` come from the version the change was proposed against (null if that KRA no longer resolves). */
+  changes: { kraId: string; nameEn: string | null; before: { presentLevel: number; targets: number[] } | null; presentLevel?: number; targets?: number[] }[];
   state: 'PENDING' | 'APPROVED' | 'REJECTED';
   decisionComment: string | null;
   createdAt: string;

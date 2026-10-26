@@ -67,12 +67,15 @@ export function SubmissionPage() {
   const act = useAction();
   const saver = useAction();
 
-  // Rebuild the form whenever the server copy changes (first load, after save, after a transition).
+  // Rebuild the form when the server's copy of the *results* changes (first load, after save, after a transition),
+  // not on every reload: saving people and levels must not wipe results the user has typed but not yet saved.
+  const resultsKey = d ? JSON.stringify([d.submission.state, d.submission.revision, d.results.map((r) => [r.kraId, r.result, r.naReason, r.remarks])]) : '';
   useEffect(() => {
     if (!d) return;
     setEdits(Object.fromEntries(d.results.map((r) => [r.kraId, { result: r.result === null ? '' : String(r.result), na: r.naReason !== null, naReason: r.naReason ?? '', remarks: r.remarks ?? '' }])));
     setDirty(false);
-  }, [d]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultsKey]);
 
   const rawByResult = useMemo(() => new Map((preview.data?.kras ?? []).map((k) => [k.resultId, k])), [preview.data]);
 
@@ -355,7 +358,7 @@ function PeopleCard({ detail, editable, levelCodes, period, subId, onSaved }: { 
     }
     setRows(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [emps.data, detail, levelCodes.join()]);
+  }, [emps.data, JSON.stringify(detail.levelAssignments), levelCodes.join()]);
 
   if (!editable) {
     return (

@@ -6,7 +6,7 @@ import { Card, Chip, Empty, ErrorBox, Loading, Modal, PageHeader, StateChip, Tab
 import { get, post } from '../lib/api';
 import { defaultPeriod, fmtScore, humanize, isPeriod, monthLabel } from '../lib/format';
 import { useAction, useAsync } from '../lib/hooks';
-import type { OrgUnit, PlantBoard } from '../lib/types';
+import type { Management, OrgUnit, PlantBoard } from '../lib/types';
 
 type Bulk = 'approve' | 'lock';
 const READY: Record<Bulk, string> = { approve: 'VERIFIED', lock: 'APPROVED' };
@@ -15,8 +15,17 @@ export function PlantsPage() {
   const { can } = useAuth();
   const toast = useToast();
   const [sp, setSp] = useSearchParams();
-  const orgs = useAsync(() => get<{ units: OrgUnit[] }>('/org/units'), []);
-  const plants = (orgs.data?.units ?? []).filter((u) => u.unitType === 'PLANT');
+  // Roles such as the MD can read months and scores but not the org tree, so the plant list falls back to the
+  // management dashboard, which already lists the plants in the caller's scope.
+  const orgs = useAsync(async (): Promise<{ id: string; name: string }[]> => {
+    if (can('org:read')) return (await get<{ units: OrgUnit[] }>('/org/units')).units.filter((u) => u.unitType === 'PLANT');
+    if (can('scores:read')) {
+      const m = await get<Management>(`/dashboards/management?period=${defaultPeriod()}`);
+      return m.plantTypes.flatMap((t) => t.plants.map((p) => ({ id: p.plantId, name: p.code })));
+    }
+    return [];
+  }, []);
+  const plants = orgs.data ?? [];
   const plantId = sp.get('plant') ?? plants[0]?.id ?? '';
   const period = sp.get('period') ?? defaultPeriod();
   const setParam = (k: string, v: string) => setSp((p) => { const n = new URLSearchParams(p); n.set(k, v); if (!n.get('plant') && plantId) n.set('plant', plantId); return n; }, { replace: true });
@@ -43,7 +52,9 @@ export function PlantsPage() {
           </>
         }
       />
-      {orgs.loading && !orgs.data ? (
+      {orgs.error ? (
+        <ErrorBox onRetry={orgs.reload}>{orgs.error}</ErrorBox>
+      ) : orgs.loading && !orgs.data ? (
         <Loading />
       ) : plants.length === 0 ? (
         <Card>

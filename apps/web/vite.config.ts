@@ -8,6 +8,8 @@ const proxy = { '/api': { target: apiTarget, changeOrigin: false, rewrite: (p: s
 
 export default defineConfig({
   plugins: [react()],
+  // Pre-bundle up front so Vite never re-optimises (and reloads the page) mid-session, which would blank a running e2e test.
+  optimizeDeps: { include: ['react', 'react-dom', 'react-router-dom', 'recharts', 'lucide-react'] },
   server: { port: Number(process.env.WEB_PORT ?? 5173), proxy },
   preview: { port: Number(process.env.WEB_PORT ?? 5173), proxy },
   test: {

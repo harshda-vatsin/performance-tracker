@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { get, post, setUnauthenticatedHandler } from '../lib/api';
 import type { Me } from '../lib/types';
 
-type State = { status: 'loading' } | { status: 'anon' } | { status: 'authed'; me: Me };
+/** `signedOut` marks a deliberate sign-out, so the next sign-in starts at Home instead of resuming the last person's page. */
+type State = { status: 'loading' } | { status: 'anon'; signedOut?: boolean } | { status: 'authed'; me: Me };
 
 interface AuthApi {
   state: State;
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await post('/auth/logout');
     } finally {
-      setState({ status: 'anon' });
+      setState({ status: 'anon', signedOut: true });
     }
   }, []);
 

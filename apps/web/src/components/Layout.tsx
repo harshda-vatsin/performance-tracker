@@ -14,7 +14,7 @@ export function Layout() {
 
   return (
     <div className="flex h-full">
-      <aside className="flex w-16 shrink-0 flex-col border-r border-slate-200 bg-white lg:w-60" aria-label="Main navigation">
+      <aside className="flex w-16 shrink-0 flex-col border-r border-slate-200 bg-white lg:w-60">
         <div className="flex h-14 items-center gap-2.5 border-b border-slate-200 px-3.5 lg:px-4">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent-700 text-[11px] font-bold tracking-tight text-white">MMF</span>
           <div className="hidden leading-tight lg:block">
@@ -22,7 +22,7 @@ export function Layout() {
             <div className="text-[11px] text-slate-500">MM Forgings</div>
           </div>
         </div>
-        <nav className="flex-1 space-y-3 overflow-y-auto p-2">
+        <nav aria-label="Main navigation" className="flex-1 space-y-3 overflow-y-auto p-2">
           {groups.map((g) => {
             const list = items.filter((n) => n.group === g);
             if (list.length === 0) return null;

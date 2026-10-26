@@ -25,7 +25,7 @@ function Protected({ children }: { children: ReactNode }) {
   const { state } = useAuth();
   const here = useLocation();
   if (state.status === 'loading') return <Loading label="Checking your session…" />;
-  if (state.status === 'anon') return <Navigate to="/login" replace state={{ from: here.pathname + here.search }} />;
+  if (state.status === 'anon') return <Navigate to="/login" replace state={state.signedOut ? null : { from: here.pathname + here.search }} />;
   return <>{children}</>;
 }
 
