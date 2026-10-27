@@ -6,19 +6,20 @@ import { get } from '../lib/api';
 import { monthLabel } from '../lib/format';
 import { useAsync } from '../lib/hooks';
 import { navFor, ROLE_LABELS, scopeLabel } from '../lib/nav';
-import type { ReopenRequest, SubmissionRow, SubState, TemplateRow } from '../lib/types';
+import type { ReopenRequest, SubmissionRow, TemplateRow } from '../lib/types';
+import { nextStep, STEP_LABEL, STEP_PERMISSION, useWorkflowSettings } from '../lib/workflow';
 
-/** Which month states each permission acts on (apps/api submissions.ts ACTIONS). */
-const ACTS_ON: { perm: string; states: SubState[]; verb: string }[] = [
-  { perm: 'submissions:enter', states: ['DRAFT', 'REOPENED', 'REJECTED'], verb: 'Enter data / resubmit' },
-  { perm: 'submissions:verify', states: ['SUBMITTED'], verb: 'Verify' },
-  { perm: 'submissions:approve', states: ['VERIFIED'], verb: 'Approve' },
-  { perm: 'submissions:lock', states: ['APPROVED'], verb: 'Lock' },
-];
+/** Months waiting for the person: data entry for Plant HR, and whichever review step is next under the current settings. */
+function actionsFor(state: string, can: (perm: string) => boolean, settings: ReturnType<typeof useWorkflowSettings>): { verb: string }[] {
+  if (['DRAFT', 'REOPENED', 'REJECTED'].includes(state)) return can('submissions:enter') ? [{ verb: 'Enter data / resubmit' }] : [];
+  const next = nextStep(state, settings);
+  return next && can(STEP_PERMISSION[next]) ? [{ verb: STEP_LABEL[next] }] : [];
+}
 
 export function HomePage() {
   const me = useMe();
   const { can } = useAuth();
+  const settings = useWorkflowSettings();
   const links = navFor(me).filter((n) => n.to !== '/');
 
   const subs = useAsync(() => (can('submissions:read') ? get<{ submissions: SubmissionRow[] }>('/submissions') : Promise.resolve({ submissions: [] })), []);
@@ -32,7 +33,7 @@ export function HomePage() {
   );
 
   const mine = (subs.data?.submissions ?? [])
-    .map((s) => ({ s, acts: ACTS_ON.filter((a) => can(a.perm) && a.states.includes(s.state)) }))
+    .map((s) => ({ s, acts: actionsFor(s.state, can, settings) }))
     .filter((x) => x.acts.length > 0);
 
   const pendingReopen = reopen.data?.requests ?? [];

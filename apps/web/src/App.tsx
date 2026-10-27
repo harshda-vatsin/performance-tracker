@@ -7,6 +7,8 @@ import { AUDIT_PERMS } from './lib/nav';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AppraisalsPage } from './pages/AppraisalsPage';
 import { AuditLogPage } from './pages/AuditLogPage';
+import { BonusPage } from './pages/BonusPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { MyResultsPage } from './pages/MyResultsPage';
 import { EmployeesPage } from './pages/EmployeesPage';
 import { ManagementPage } from './pages/ManagementPage';
@@ -68,6 +70,8 @@ export function App() {
         <Route path="reopen" element={<Gate perm="submissions:read"><ReopenPage /></Gate>} />
         <Route path="dashboards/unit" element={<Gate perm="scores:read"><UnitTrendPage /></Gate>} />
         <Route path="dashboards/management" element={<Gate perm="scores:read"><ManagementPage /></Gate>} />
+        <Route path="bonus" element={<Gate perm="bonus:read"><BonusPage /></Gate>} />
+        <Route path="settings" element={<Gate perm="settings:write"><SettingsPage /></Gate>} />
         <Route path="admin/users" element={<Gate perm="users:manage"><AdminUsersPage /></Gate>} />
         <Route path="audit" element={<Gate perm={AUDIT_PERMS}><AuditLogPage /></Gate>} />
         <Route path="my-results" element={<Gate perm="myscores:read"><MyResultsPage /></Gate>} />

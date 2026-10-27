@@ -15,7 +15,7 @@ const ACTIONS: Record<string, { label: string; kind: 'primary' | 'danger'; needs
   dispute: { label: 'Raise a concern', kind: 'danger', needsComment: true },
   open_appraisal: { label: 'Open year-end appraisal', kind: 'primary' },
   submit_self: { label: 'Submit self-assessment', kind: 'primary' },
-  submit_manager: { label: 'Submit to reviewer', kind: 'primary' },
+  submit_manager: { label: 'Submit assessment', kind: 'primary' },
   sign_off: { label: 'Sign off', kind: 'primary' },
   finalise: { label: 'Finalise and lock', kind: 'primary', confirm: true },
   send_back: { label: 'Send back', kind: 'danger', needsComment: true },
@@ -60,7 +60,7 @@ export function SeniorCyclePage() {
     <div className="space-y-4">
       <PageHeader
         title={`${cycle.employee.name} · ${fyLabel(cycle.fiscalYear)}`}
-        subtitle={`${cycle.employee.code} · Manager ${cycle.manager.name} · Reviewer ${cycle.reviewer.name}`}
+        subtitle={`${cycle.employee.code} · Manager ${cycle.manager.name}${cycle.reviewer ? ` · Reviewer ${cycle.reviewer.name}` : ''}`}
         actions={<CycleChip state={cycle.state} />}
       />
 

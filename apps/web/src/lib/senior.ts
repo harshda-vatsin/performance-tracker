@@ -37,7 +37,7 @@ export interface CycleRow {
   employeeCode: string;
   employeeName: string;
   managerName: string;
-  reviewerName: string;
+  reviewerName: string | null;
   plantCode: string | null;
   score: number | null;
   band: BandRef | null;
@@ -100,7 +100,7 @@ export interface CycleDetail {
     revision: number;
     employee: { code: string; name: string };
     manager: { name: string };
-    reviewer: { name: string };
+    reviewer: { name: string } | null;
     final: { score: number | null; band: BandRef | null; finalisedAt: string; finalisedBy: string } | null;
   };
   viewer: {

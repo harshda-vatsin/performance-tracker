@@ -4,16 +4,17 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Card, Chip, Empty, ErrorBox, Loading, Modal, PageHeader, StateChip, TableWrap, useToast } from '../components/ui';
 import { get, post } from '../lib/api';
+import { statesFor, useWorkflowSettings, type WorkflowSettings } from '../lib/workflow';
 import { defaultPeriod, fmtScore, humanize, isPeriod, monthLabel } from '../lib/format';
 import { useAction, useAsync } from '../lib/hooks';
 import type { Management, OrgUnit, PlantBoard } from '../lib/types';
 
 type Bulk = 'approve' | 'lock';
-const READY: Record<Bulk, string> = { approve: 'VERIFIED', lock: 'APPROVED' };
 
 export function PlantsPage() {
   const { can } = useAuth();
   const toast = useToast();
+  const settings = useWorkflowSettings();
   const [sp, setSp] = useSearchParams();
   // Roles such as Management can read months and scores but not the org tree, so the plant list falls back to the
   // management dashboard, which already lists the plants in the caller's scope.
@@ -76,7 +77,7 @@ export function PlantsPage() {
           }
           action={
             <div className="flex gap-2">
-              {can('submissions:approve') && (
+              {can('submissions:approve') && settings.monthly.plantHeadApprove && (
                 <button className="btn btn-secondary" onClick={() => setBulk('approve')}>
                   <CheckCheck size={15} /> Approve all
                 </button>
@@ -140,6 +141,7 @@ export function PlantsPage() {
       {bulk && board.data && (
         <BulkDialog
           action={bulk}
+          settings={settings}
           board={board.data}
           onClose={() => setBulk(undefined)}
           onDone={(n) => {
@@ -153,9 +155,10 @@ export function PlantsPage() {
   );
 }
 
-function BulkDialog({ action, board, onClose, onDone }: { action: Bulk; board: PlantBoard; onClose: () => void; onDone: (count: number) => void }) {
-  const ready = board.units.filter((u) => u.state === READY[action]);
-  const notReady = board.units.filter((u) => u.state !== READY[action]);
+function BulkDialog({ action, settings, board, onClose, onDone }: { action: Bulk; settings: WorkflowSettings; board: PlantBoard; onClose: () => void; onDone: (count: number) => void }) {
+  const readyStates = statesFor(action, settings);
+  const ready = board.units.filter((u) => readyStates.includes(u.state));
+  const notReady = board.units.filter((u) => !readyStates.includes(u.state));
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [excluded, setExcluded] = useState<Record<string, boolean>>({});
   const { busy, error, run } = useAction();
@@ -192,11 +195,11 @@ function BulkDialog({ action, board, onClose, onDone }: { action: Bulk; board: P
       <div className="space-y-4">
         {error && <ErrorBox>{error}</ErrorBox>}
         <p className="text-sm text-slate-600">
-          All-or-nothing: every unit must be <b>{humanize(READY[action]).toLowerCase()}</b>, or be excluded with a reason. One history entry is written per unit.
+          All-or-nothing: every unit must be <b>{readyStates.map((st) => humanize(st).toLowerCase()).join(' or ')}</b>, or be excluded with a reason. One history entry is written per unit.
         </p>
         <div>
           <h3 className="section-title mb-1">Will be {action === 'approve' ? 'approved' : 'locked'}</h3>
-          {ready.length === 0 ? <p className="muted">No unit is {humanize(READY[action]).toLowerCase()} yet.</p> : <p className="text-sm">{ready.map((u) => u.unitCode).join(', ')}</p>}
+          {ready.length === 0 ? <p className="muted">No unit is {readyStates.map((st) => humanize(st).toLowerCase()).join(' or ')} yet.</p> : <p className="text-sm">{ready.map((u) => u.unitCode).join(', ')}</p>}
         </div>
         {notReady.length > 0 && (
           <div>

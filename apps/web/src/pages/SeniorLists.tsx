@@ -1,3 +1,4 @@
+import { useWorkflowSettings } from '../lib/workflow';
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -72,7 +73,7 @@ function CycleTable({ rows, cols, label }: { rows: CycleRow[]; cols: Col[]; labe
               <td className="td">{fyLabel(r.fiscalYear)}</td>
               {has('plant') && <td className="td">{r.plantCode ?? '—'}</td>}
               {has('manager') && <td className="td">{r.managerName}</td>}
-              {has('reviewer') && <td className="td">{r.reviewerName}</td>}
+              {has('reviewer') && <td className="td">{r.reviewerName ?? <span className="muted">—</span>}</td>}
               <td className="td">
                 <CycleChip state={r.state} />
               </td>
@@ -121,7 +122,7 @@ export function MyGoalsPage() {
                       <CycleChip state={r.state} />
                     </div>
                     <p className="muted">
-                      Manager {r.managerName} · Reviewer {r.reviewerName}
+                      Manager {r.managerName}{r.reviewerName ? ` · Reviewer ${r.reviewerName}` : ''}
                     </p>
                     {mine && <Notice tone="amber">{r.state === 'PENDING_ACK' ? 'Your goal sheet is ready for you to acknowledge.' : 'Your self-assessment is due.'}</Notice>}
                     <ScoreCell row={r} />
@@ -205,6 +206,7 @@ function NewGoalSheet({ onClose }: { onClose: () => void }) {
   const [fy, setFy] = useState(String(currentFy()));
   const [managerUserId, setManager] = useState('');
   const [reviewerUserId, setReviewer] = useState('');
+  const reviewerStep = useWorkflowSettings().senior.reviewerStep;
   const { busy, error, run } = useAction();
   const opts = (list: { userId: string; employeeId: string; employeeCode: string; fullName: string }[], key: 'userId' | 'employeeId') =>
     list.map((p) => (
@@ -224,10 +226,10 @@ function NewGoalSheet({ onClose }: { onClose: () => void }) {
           </button>
           <button
             className="btn btn-primary"
-            disabled={busy || !employeeId || !managerUserId || !reviewerUserId || !/^\d{4}$/.test(fy)}
+            disabled={busy || !employeeId || !managerUserId || (reviewerStep && !reviewerUserId) || !/^\d{4}$/.test(fy)}
             onClick={() =>
               void run(async () => {
-                const { id } = await post<{ id: string }>('/senior/cycles', { employeeId, fiscalYear: Number(fy), managerUserId, reviewerUserId });
+                const { id } = await post<{ id: string }>('/senior/cycles', { employeeId, fiscalYear: Number(fy), managerUserId, ...(reviewerUserId ? { reviewerUserId } : {}) });
                 toast('Goal sheet started');
                 navigate(`/senior/${id}`);
               })
@@ -260,9 +262,9 @@ function NewGoalSheet({ onClose }: { onClose: () => void }) {
               {opts(people.data!.managers, 'userId')}
             </select>
           </Field>
-          <Field label="Reviewer" htmlFor="ns-rev" hint="An HOD / Manager, Plant Head or Management user. Also set on the Appraisals screen.">
+          <Field label={reviewerStep ? 'Reviewer' : 'Reviewer (optional)'} htmlFor="ns-rev" hint={reviewerStep ? 'An HOD / Manager, Plant Head or Management user. Also set on the Appraisals screen.' : 'The reviewer step is off, so a reviewer is not needed. You can still assign one.'}>
             <select id="ns-rev" className="input" value={reviewerUserId} onChange={(e) => setReviewer(e.target.value)}>
-              <option value="">Choose…</option>
+              <option value="">{reviewerStep ? 'Choose…' : 'None'}</option>
               {opts(people.data!.reviewers, 'userId')}
             </select>
           </Field>

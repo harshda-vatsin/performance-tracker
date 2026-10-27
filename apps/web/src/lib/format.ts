@@ -67,3 +67,18 @@ export function initials(name: string): string {
 export const humanize = (code: string) => code.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
 
 export const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/** Integer paise -> "₹3,300.00". Whole-number arithmetic only: money is never a floating-point value. */
+export function fmtPaise(paise: number): string {
+  const abs = Math.abs(paise);
+  const rupees = Math.floor(abs / 100);
+  return `${paise < 0 ? '-' : ''}₹${rupees.toLocaleString('en-IN')}.${String(abs % 100).padStart(2, '0')}`;
+}
+
+/** "3000", "3000.5" or "-25.50" -> integer paise by string handling (no floats); null when it is not a rupee amount. */
+export function rupeesToPaise(text: string, allowNegative = false): number | null {
+  const m = /^(-?)(\d{1,12})(?:\.(\d{1,2}))?$/.exec(text.trim());
+  if (!m || (m[1] && !allowNegative)) return null;
+  const paise = Number(m[2]) * 100 + Number((m[3] ?? '').padEnd(2, '0') || '0');
+  return m[1] ? -paise : paise;
+}

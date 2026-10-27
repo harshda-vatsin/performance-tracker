@@ -1,3 +1,4 @@
+import { nextStep, STEP_LABEL, STEP_PERMISSION, useWorkflowSettings, type WorkflowSettings } from '../lib/workflow';
 import { Save, Send } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -18,27 +19,21 @@ interface RowEdit {
 
 type Step = { action: 'submit' | 'verify' | 'approve' | 'lock' | 'reject' | 'resume'; label: string; perm: string; tone?: 'danger'; comment?: 'required' | 'optional' };
 
-/** What each state offers, and the permission each step needs (apps/api submissions.ts ACTIONS). */
-function stepsFor(state: string): Step[] {
+/** What each state offers and the permission each step needs. Which review step is next depends on the settings Corporate HR chose. */
+function stepsFor(state: string, settings: WorkflowSettings): Step[] {
   switch (state) {
     case 'DRAFT':
     case 'REOPENED':
-      return [{ action: 'submit', label: 'Submit for verification', perm: 'submissions:submit', comment: state === 'REOPENED' ? 'required' : undefined }];
+      return [{ action: 'submit', label: 'Submit for review', perm: 'submissions:submit', comment: state === 'REOPENED' ? 'required' : undefined }];
     case 'SUBMITTED':
-      return [
-        { action: 'verify', label: 'Verify', perm: 'submissions:verify' },
-        { action: 'reject', label: 'Reject', perm: 'submissions:verify', tone: 'danger', comment: 'required' },
-      ];
     case 'VERIFIED':
+    case 'APPROVED': {
+      const next = nextStep(state, settings) ?? 'lock';
       return [
-        { action: 'approve', label: 'Approve', perm: 'submissions:approve' },
-        { action: 'reject', label: 'Reject', perm: 'submissions:approve', tone: 'danger', comment: 'required' },
+        { action: next, label: STEP_LABEL[next], perm: STEP_PERMISSION[next] },
+        { action: 'reject', label: 'Reject', perm: STEP_PERMISSION[next], tone: 'danger', comment: 'required' },
       ];
-    case 'APPROVED':
-      return [
-        { action: 'lock', label: 'Lock', perm: 'submissions:lock' },
-        { action: 'reject', label: 'Reject', perm: 'submissions:lock', tone: 'danger', comment: 'required' },
-      ];
+    }
     case 'REJECTED':
       return [{ action: 'resume', label: 'Resume editing', perm: 'submissions:enter' }];
     default:
@@ -50,6 +45,7 @@ export function SubmissionPage() {
   const { id = '' } = useParams();
   const { can } = useAuth();
   const toast = useToast();
+  const settings = useWorkflowSettings();
   const detail = useAsync(() => get<SubmissionDetail>(`/submissions/${id}`), [id]);
   const preview = useAsync(() => get<Preview>(`/submissions/${id}/preview`), [id]);
   const d = detail.data;
@@ -147,7 +143,7 @@ export function SubmissionPage() {
   if (detail.loading && !d) return <Loading />;
   if (detail.error || !d) return <ErrorBox onRetry={detail.reload}>{detail.error ?? 'Month not found'}</ErrorBox>;
   const sub = d.submission;
-  const steps = stepsFor(sub.state).filter((s) => can(s.perm));
+  const steps = stepsFor(sub.state, settings).filter((s) => can(s.perm));
   const levelCodes = preview.data?.levels.map((l) => l.levelCode) ?? [];
   const set = (kraId: string, p: Partial<RowEdit>) => {
     setEdits((e) => ({ ...e, [kraId]: { ...e[kraId], ...p } }));
