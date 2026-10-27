@@ -38,6 +38,8 @@ const enter = async (id: string, values: (number | null)[], cookie = c.phr1) => 
 
 beforeAll(async () => {
   env = await setupEnv();
+  // These tests walk the whole review chain (HOD verify, Plant Head approve, Corporate HR lock); both optional steps are off by default.
+  await env.pool.query("UPDATE core.workflow_setting SET enabled = true WHERE key LIKE 'monthly.%'");
   const { ids, pool } = env;
   ids.d1b = (await pool.query("INSERT INTO core.org_unit (parent_id, unit_type, code, name) VALUES ($1,'DEPARTMENT','P1-PRESS','Press Shop') RETURNING id", [ids.p1])).rows[0].id;
   for (const [code, rank] of [['HOD', 1], ['SHIFT_INCHARGE', 2], ['SUPERVISOR', 3]] as const) {

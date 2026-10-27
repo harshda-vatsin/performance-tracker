@@ -17,6 +17,7 @@ import { dashboardRoutes } from './routes/dashboards.js';
 import { scorecardChangeRoutes } from './routes/scorecard-changes.js';
 import { scorecardRoutes } from './routes/scorecards.js';
 import { seniorRoutes } from './routes/senior.js';
+import { settingsRoutes } from './routes/settings.js';
 import { submissionRoutes } from './routes/submissions.js';
 import { templateRoutes } from './routes/templates.js';
 import type { Guards } from './routes/types.js';
@@ -188,6 +189,7 @@ export function buildApp(pool: pg.Pool): FastifyInstance {
     },
   };
   configRoutes(app, pool, guards);
+  settingsRoutes(app, pool, guards);
   orgRoutes(app, pool, guards);
   employeeRoutes(app, pool, guards);
   kpiRoutes(app, pool, guards);

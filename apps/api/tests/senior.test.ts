@@ -77,6 +77,8 @@ async function toHrFinalisation(id: string, who: { mgr: string | undefined; empl
 
 beforeAll(async () => {
   env = await setupEnv();
+  // These tests cover the reviewer sign-off; the reviewer step is off by default.
+  await env.pool.query("UPDATE core.workflow_setting SET enabled = true WHERE key = 'senior.reviewer_step'");
   const { ids, pool } = env;
   // The 7 roles: the senior employee is an Employee, the manager an HOD, and the reviewer is an assignment on the appraisal
   // (any HOD / Manager, Plant Head or Management user).

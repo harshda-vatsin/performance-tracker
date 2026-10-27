@@ -6,6 +6,7 @@ import type { AuthContext } from '../auth/service.js';
 import { withTransaction, type Db } from '../db.js';
 import { daysInMonth, fiscalYearOf, isPeriod, quarterOf } from '../fiscal.js';
 import { scopeFor } from '../rbac/policy.js';
+import { loadWorkflowSettings, nextStep, statesFor, stepOf, type WorkflowSettings } from '../workflow.js';
 import { computeMonth, ENGINE_VERSION, hashInputs, resolveParams, type ResultRow, type Stint } from '../scoring/monthly.js';
 import type { Guards } from './types.js';
 import { asObject, bad, finite, str, unitProblem } from './util.js';
@@ -37,19 +38,25 @@ interface Issue {
   message: string;
 }
 
-/** Doc 06 §1 transition table (Phase 1 states). `perm` may depend on the state a rejection comes from. */
-const ACTIONS: Record<string, { from: State[]; to: State; perm: (from: State) => string }> = {
-  submit: { from: ['DRAFT', 'REOPENED'], to: 'SUBMITTED', perm: () => 'submissions:submit' },
-  verify: { from: ['SUBMITTED'], to: 'VERIFIED', perm: () => 'submissions:verify' },
-  approve: { from: ['VERIFIED'], to: 'APPROVED', perm: () => 'submissions:approve' },
-  lock: { from: ['APPROVED'], to: 'LOCKED', perm: () => 'submissions:lock' },
-  reject: {
-    from: ['SUBMITTED', 'VERIFIED', 'APPROVED'],
-    to: 'REJECTED',
-    perm: (from) => (from === 'SUBMITTED' ? 'submissions:verify' : from === 'VERIFIED' ? 'submissions:approve' : 'submissions:lock'),
-  },
-  resume: { from: ['REJECTED'], to: 'DRAFT', perm: () => 'submissions:enter' },
-};
+/**
+ * Doc 06 §1 transition table, with the review steps made configurable (migration 007). Submit and resume are fixed;
+ * verify, approve and lock depend on which steps Corporate HR has switched on (src/workflow.ts), and lock is always on.
+ */
+type Resolved = { ok: true; to: State; permission: string } | { ok: false; status: number; error: string };
+
+function resolveAction(action: string, state: State, settings: WorkflowSettings): Resolved {
+  if (action === 'submit') return state === 'DRAFT' || state === 'REOPENED' ? { ok: true, to: 'SUBMITTED', permission: 'submissions:submit' } : { ok: false, status: 409, error: 'WRONG_STATE' };
+  if (action === 'resume') return state === 'REJECTED' ? { ok: true, to: 'DRAFT', permission: 'submissions:enter' } : { ok: false, status: 409, error: 'WRONG_STATE' };
+  const next = nextStep(state, settings);
+  if (action === 'reject') return next ? { ok: true, to: 'REJECTED', permission: next.permission } : { ok: false, status: 409, error: 'WRONG_STATE' };
+  const step = stepOf(action);
+  if (!step) return { ok: false, status: 400, error: 'BAD_REQUEST' };
+  if (next?.action === action) return { ok: true, to: step.to, permission: step.permission };
+  const switchedOff = (action === 'verify' && !settings.monthlyHodVerify) || (action === 'approve' && !settings.monthlyPlantHeadApprove);
+  return { ok: false, status: 409, error: switchedOff ? 'STEP_DISABLED' : 'WRONG_STATE' };
+}
+
+const ACTION_NAMES = ['submit', 'verify', 'approve', 'lock', 'reject', 'resume'];
 
 export function submissionRoutes(app: FastifyInstance, pool: pg.Pool, g: Guards): void {
   async function loadSub(id: string): Promise<Sub | undefined> {
@@ -249,8 +256,10 @@ export function submissionRoutes(app: FastifyInstance, pool: pg.Pool, g: Guards)
         [sub.id],
       )
     ).rows;
+    const next = nextStep(sub.state, await loadWorkflowSettings(pool));
     return {
-      submission: { id: sub.id, orgUnitId: sub.orgUnitId, unitCode: sub.unitCode, period: sub.period, state: sub.state, revision: sub.revision },
+      // `nextStep` is the review step this month waits for under the current settings (verify, approve or lock).
+      submission: { id: sub.id, orgUnitId: sub.orgUnitId, unitCode: sub.unitCode, period: sub.period, state: sub.state, revision: sub.revision, nextStep: next?.action ?? null },
       results: rows.map(({ weights: _w, ...r }) => r),
       levelAssignments: assignments,
       events,
@@ -420,7 +429,10 @@ export function submissionRoutes(app: FastifyInstance, pool: pg.Pool, g: Guards)
     if (!isPeriod(period) || (action !== 'approve' && action !== 'lock')) {
       return reply.code(400).send(bad('period (YYYY-MM) and action (approve or lock) are required'));
     }
-    const def = ACTIONS[action];
+    const settings = await loadWorkflowSettings(pool);
+    if (action === 'approve' && !settings.monthlyPlantHeadApprove) return reply.code(409).send({ error: 'STEP_DISABLED' });
+    const step = stepOf(action)!;
+    const readyStates = statesFor(step.action, settings);
 
     const plant = (
       await pool.query(
@@ -430,7 +442,7 @@ export function submissionRoutes(app: FastifyInstance, pool: pg.Pool, g: Guards)
       )
     ).rows[0] as { path: string; unitType: string } | undefined;
     if (!plant || !(await g.canAtUnit(auth, 'submissions:read', plantId))) return reply.code(404).send({ error: 'NOT_FOUND' });
-    if (!(await g.canAtUnit(auth, def.perm(def.from[0]), plantId))) return reply.code(403).send({ error: 'FORBIDDEN' });
+    if (!(await g.canAtUnit(auth, step.permission, plantId))) return reply.code(403).send({ error: 'FORBIDDEN' });
 
     const units = (
       await pool.query(
@@ -452,7 +464,7 @@ export function submissionRoutes(app: FastifyInstance, pool: pg.Pool, g: Guards)
       excluded.set(unitId, reason);
     }
 
-    const notReady = units.filter((u) => !excluded.has(u.id) && !(u.state && def.from.includes(u.state)));
+    const notReady = units.filter((u) => !excluded.has(u.id) && !(u.state && readyStates.includes(u.state)));
     if (notReady.length > 0) {
       return reply.code(409).send({ error: 'UNITS_NOT_READY', units: notReady.map((u) => ({ unitCode: u.code, state: u.state ?? 'NOT_STARTED' })) });
     }
@@ -463,7 +475,7 @@ export function submissionRoutes(app: FastifyInstance, pool: pg.Pool, g: Guards)
     try {
       await withTransaction(pool, async (tx) => {
         for (const s of subs) {
-          if ((await applyTransition(tx, s, action, def.to, auth, null, req.ip)) === null) throw new Error('STALE_STATE');
+          if ((await applyTransition(tx, s, action, step.to, auth, null, req.ip)) === null) throw new Error('STALE_STATE');
         }
         await audit(tx, {
           actorId: auth.userId,
@@ -481,7 +493,7 @@ export function submissionRoutes(app: FastifyInstance, pool: pg.Pool, g: Guards)
     return {
       action,
       period,
-      state: def.to,
+      state: step.to,
       count: subs.length,
       excluded: [...excluded].map(([id, reason]) => ({ unitCode: units.find((u) => u.id === id)!.code, reason })),
     };
@@ -493,13 +505,13 @@ export function submissionRoutes(app: FastifyInstance, pool: pg.Pool, g: Guards)
     const auth = req.auth!;
     const b = asObject(req.body);
     const action = str(b.action, 20);
-    const def = action ? ACTIONS[action] : undefined;
-    if (!action || !def) return reply.code(400).send(bad(`action must be one of ${Object.keys(ACTIONS).join(', ')}`));
+    if (!action || !ACTION_NAMES.includes(action)) return reply.code(400).send(bad(`action must be one of ${ACTION_NAMES.join(', ')}`));
 
     const sub = await visible(req, reply, (req.params as { id: string }).id);
     if (!sub) return;
-    if (!def.from.includes(sub.state)) return reply.code(409).send({ error: 'WRONG_STATE', state: sub.state });
-    if (!(await g.canAtUnit(auth, def.perm(sub.state), sub.orgUnitId))) return reply.code(403).send({ error: 'FORBIDDEN' });
+    const resolved = resolveAction(action, sub.state, await loadWorkflowSettings(pool));
+    if (!resolved.ok) return reply.code(resolved.status).send({ error: resolved.error, state: sub.state });
+    if (!(await g.canAtUnit(auth, resolved.permission, sub.orgUnitId))) return reply.code(403).send({ error: 'FORBIDDEN' });
 
     const comment = str(b.comment, 1000);
     if ((action === 'reject' || (action === 'submit' && sub.state === 'REOPENED')) && !comment) {
@@ -512,9 +524,9 @@ export function submissionRoutes(app: FastifyInstance, pool: pg.Pool, g: Guards)
       if (issues.length > 0) return reply.code(422).send({ error: 'SUBMISSION_INVALID', issues });
     }
 
-    const newRevision = await withTransaction(pool, (tx) => applyTransition(tx, sub, action, def.to, auth, comment ?? null, req.ip));
+    const newRevision = await withTransaction(pool, (tx) => applyTransition(tx, sub, action, resolved.to, auth, comment ?? null, req.ip));
     if (newRevision === null) return reply.code(409).send({ error: 'STALE_STATE' });
-    return { state: def.to, revision: newRevision };
+    return { state: resolved.to, revision: newRevision };
   });
 
   // ----------------------------------------------------------------- scores

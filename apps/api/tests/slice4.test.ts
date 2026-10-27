@@ -41,6 +41,8 @@ async function prepare(unit: 'd1' | 'd1b', period: string, values: number[], upT
 
 beforeAll(async () => {
   env = await setupEnv();
+  // The dashboards tests walk the whole review chain; the optional HOD and Plant Head steps are off by default.
+  await env.pool.query("UPDATE core.workflow_setting SET enabled = true WHERE key LIKE 'monthly.%'");
   const { ids, pool } = env;
   ids.d1b = (await pool.query("INSERT INTO core.org_unit (parent_id, unit_type, code, name) VALUES ($1,'DEPARTMENT','P1-PRESS','Press Shop') RETURNING id", [ids.p1])).rows[0].id;
   for (const [code, rank] of [['HOD', 1], ['SHIFT_INCHARGE', 2], ['SUPERVISOR', 3]] as const) {

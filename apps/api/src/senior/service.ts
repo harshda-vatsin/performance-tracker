@@ -11,6 +11,7 @@ import { fiscalYearOf, isPeriod, quarterOf } from '../fiscal.js';
 import { unitProblem } from '../routes/util.js';
 import { ENGINE_VERSION, hashInputs } from '../scoring/monthly.js';
 import { rollupFiscalYear } from '../scoring/rollup.js';
+import { loadWorkflowSettings } from '../workflow.js';
 import { bandFor, computeSeniorMonth, rollupSenior, seniorParams, type RatingBand, type SeniorKraInput, type SeniorMonthScores } from './scoring.js';
 
 export class SeniorError extends Error {
@@ -77,8 +78,9 @@ interface Cycle {
   fiscalYear: number;
   managerId: string;
   managerName: string;
-  reviewerId: string;
-  reviewerName: string;
+  /** Null while the appraisal has no reviewer; only needed when the reviewer step is switched on. */
+  reviewerId: string | null;
+  reviewerName: string | null;
   state: CycleState;
   goalVersion: number;
   acknowledgedAt: string | null;
@@ -152,7 +154,7 @@ async function loadCycle(db: Db, id: string): Promise<Cycle | undefined> {
        JOIN core.employee e ON e.id = ap.employee_id
        LEFT JOIN core.user_account eu ON eu.employee_id = ap.employee_id
        JOIN core.user_account mu ON mu.id = c.manager_id JOIN core.employee mn ON mn.id = mu.employee_id
-       JOIN core.user_account ru ON ru.id = ap.reviewer_user_id JOIN core.employee rn ON rn.id = ru.employee_id
+       LEFT JOIN core.user_account ru ON ru.id = ap.reviewer_user_id LEFT JOIN core.employee rn ON rn.id = ru.employee_id
        LEFT JOIN core.user_account fu ON fu.id = c.finalised_by LEFT JOIN core.employee fe ON fe.id = fu.employee_id
        WHERE c.id = $1`,
       [id],
@@ -481,7 +483,7 @@ export async function listCycles(pool: pg.Pool, { auth }: Ctx, view: ListView, f
      JOIN core.appraisal ap ON ap.id = c.appraisal_id
      JOIN core.employee e ON e.id = ap.employee_id
      JOIN core.user_account mu ON mu.id = c.manager_id JOIN core.employee mn ON mn.id = mu.employee_id
-     JOIN core.user_account ru ON ru.id = ap.reviewer_user_id JOIN core.employee rn ON rn.id = ru.employee_id
+     LEFT JOIN core.user_account ru ON ru.id = ap.reviewer_user_id LEFT JOIN core.employee rn ON rn.id = ru.employee_id
      LEFT JOIN LATERAL (
        SELECT p.code FROM core.employee_assignment ea
        JOIN core.org_unit u ON u.id = ea.org_unit_id
@@ -601,7 +603,7 @@ export async function getDetail(pool: pg.Pool, { auth }: Ctx, cycleId: string) {
       revision: cycle.revision,
       employee: { code: cycle.employeeCode, name: cycle.employeeName },
       manager: { name: cycle.managerName },
-      reviewer: { name: cycle.reviewerName },
+      reviewer: cycle.reviewerName ? { name: cycle.reviewerName } : null,
       final: finalised ? { score: cycle.finalScore, band, finalisedAt: cycle.finalisedAt, finalisedBy: cycle.finalisedByName } : null,
     },
     viewer: {
@@ -798,9 +800,25 @@ export async function transition(pool: pg.Pool, { auth, ip }: Ctx, cycleId: stri
       if (!a || !a.summary) throw fail(409, 'SENIOR_ASSESSMENT_REQUIRED', 'write the assessment summary before submitting');
       await tx.query('UPDATE core.senior_assessment SET submitted_at = now() WHERE cycle_id = $1 AND stage = $2', [cycleId, stage]);
     }
+    // Where the move lands can depend on the reviewer step (migration 007): with it off, the manager's submission goes
+    // straight to HR, and HR sends it straight back to the manager.
+    let to = rule.to;
+    if (action === 'submit_manager') {
+      if ((await loadWorkflowSettings(tx)).seniorReviewerStep) {
+        if (!cycle.reviewerId) throw fail(409, 'SENIOR_REVIEWER_REQUIRED', 'assign a reviewer on the appraisal before sending it to review');
+      } else {
+        to = 'HR_FINALISATION';
+      }
+    }
+    if (action === 'send_back' && cycle.state === 'HR_FINALISATION') {
+      const came = (
+        await tx.query("SELECT from_state FROM core.workflow_event WHERE entity_type = 'SENIOR_CYCLE' AND entity_id = $1 AND to_state = 'HR_FINALISATION' ORDER BY id DESC LIMIT 1", [cycleId])
+      ).rows[0];
+      if (came?.from_state === 'MANAGER_ASSESSMENT') to = 'MANAGER_ASSESSMENT';
+    }
     if (action === 'send_back') {
       // Re-open the assessment of the stage being sent back to, so its author can edit and resubmit.
-      const stage = rule.to === 'SELF_ASSESSMENT' ? 'SELF' : rule.to === 'MANAGER_ASSESSMENT' ? 'MANAGER' : null;
+      const stage = to === 'SELF_ASSESSMENT' ? 'SELF' : to === 'MANAGER_ASSESSMENT' ? 'MANAGER' : null;
       if (stage) await tx.query('UPDATE core.senior_assessment SET submitted_at = NULL WHERE cycle_id = $1 AND stage = $2', [cycleId, stage]);
     }
 
@@ -817,19 +835,19 @@ export async function transition(pool: pg.Pool, { auth, ip }: Ctx, cycleId: stri
         [cycleId, score, band.code, band.label, JSON.stringify(rollup), JSON.stringify(params), auth.userId],
       );
     } else if (action === 'issue') {
-      await tx.query('UPDATE core.senior_cycle SET state = $2, goal_version = goal_version + 1 WHERE id = $1', [cycleId, rule.to]);
+      await tx.query('UPDATE core.senior_cycle SET state = $2, goal_version = goal_version + 1 WHERE id = $1', [cycleId, to]);
     } else if (action === 'acknowledge') {
-      await tx.query('UPDATE core.senior_cycle SET state = $2, acknowledged_at = now(), acknowledged_version = goal_version WHERE id = $1', [cycleId, rule.to]);
+      await tx.query('UPDATE core.senior_cycle SET state = $2, acknowledged_at = now(), acknowledged_version = goal_version WHERE id = $1', [cycleId, to]);
     } else if (action === 'send_back') {
-      await tx.query('UPDATE core.senior_cycle SET state = $2, revision = revision + 1 WHERE id = $1', [cycleId, rule.to]);
+      await tx.query('UPDATE core.senior_cycle SET state = $2, revision = revision + 1 WHERE id = $1', [cycleId, to]);
     } else {
-      await tx.query('UPDATE core.senior_cycle SET state = $2 WHERE id = $1', [cycleId, rule.to]);
+      await tx.query('UPDATE core.senior_cycle SET state = $2 WHERE id = $1', [cycleId, to]);
     }
 
     await tx.query(
       `INSERT INTO core.workflow_event (entity_type, entity_id, revision, from_state, to_state, actor_id, comment)
        VALUES ('SENIOR_CYCLE',$1,$2,$3,$4,$5,$6)`,
-      [cycleId, cycle.revision, cycle.state, rule.to, auth.userId, comment],
+      [cycleId, cycle.revision, cycle.state, to, auth.userId, comment],
     );
     await audit(tx, {
       actorId: auth.userId,
@@ -837,9 +855,9 @@ export async function transition(pool: pg.Pool, { auth, ip }: Ctx, cycleId: stri
       entityType: 'senior_cycle',
       entityId: cycleId,
       before: { state: cycle.state },
-      after: { state: rule.to, comment },
+      after: { state: to, comment },
       ip,
     });
-    return { state: rule.to };
+    return { state: to };
   });
 }
