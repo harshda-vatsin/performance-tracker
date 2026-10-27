@@ -6,6 +6,7 @@ import { fiscalMonths, fmtDate, fmtScore, fyLabel, monthLabel } from '../lib/for
 import { useAction, useAsync } from '../lib/hooks';
 import { DIRECTION_LABEL, quarterOf, STATE_LABEL, type CycleDetail, type MonthView, type RollupView, type SeniorKra } from '../lib/senior';
 import { CycleChip, ScoreCell } from './SeniorLists';
+import { useWorkflowSettings } from '../lib/workflow';
 
 type Act = (fn: () => Promise<unknown>, done: string) => Promise<boolean>;
 
@@ -15,7 +16,7 @@ const ACTIONS: Record<string, { label: string; kind: 'primary' | 'danger'; needs
   dispute: { label: 'Raise a concern', kind: 'danger', needsComment: true },
   open_appraisal: { label: 'Open year-end appraisal', kind: 'primary' },
   submit_self: { label: 'Submit self-assessment', kind: 'primary' },
-  submit_manager: { label: 'Submit assessment', kind: 'primary' },
+  submit_manager: { label: 'Submit to reviewer', kind: 'primary' },
   sign_off: { label: 'Sign off', kind: 'primary' },
   finalise: { label: 'Finalise and lock', kind: 'primary', confirm: true },
   send_back: { label: 'Send back', kind: 'danger', needsComment: true },
@@ -131,13 +132,16 @@ export function SeniorCyclePage() {
 function ActionBar({ d, id, act, busy, blocked, clearError }: { d: CycleDetail; id: string; act: Act; busy: boolean; blocked: string | null; clearError: () => void }) {
   const [comment, setComment] = useState('');
   const [confirming, setConfirming] = useState<string | null>(null);
+  const reviewerStep = useWorkflowSettings().senior.reviewerStep;
+  /** With the reviewer step off, the manager's assessment goes straight to Corporate HR. */
+  const labelOf = (a: string) => (a === 'submit_manager' && !reviewerStep ? 'Submit to Corporate HR' : ACTIONS[a].label);
   const actions = Object.keys(ACTIONS).filter((a) => d.viewer.actions.includes(a));
   if (actions.length === 0) return null;
   const wantsComment = actions.some((a) => ACTIONS[a].needsComment);
 
   const fire = async (action: string) => {
     clearError();
-    const ok = await act(() => post(`/senior/cycles/${id}/transitions`, { action, comment: comment.trim() || undefined }), `${ACTIONS[action].label}: done`);
+    const ok = await act(() => post(`/senior/cycles/${id}/transitions`, { action, comment: comment.trim() || undefined }), `${labelOf(action)}: done`);
     if (ok) setComment('');
     setConfirming(null);
   };
@@ -170,7 +174,7 @@ function ActionBar({ d, id, act, busy, blocked, clearError }: { d: CycleDetail; 
             const disabled = busy || (spec.needsComment && !comment.trim()) || (a === 'issue' && blocked !== null);
             return (
               <button key={a} className={`btn ${spec.kind === 'primary' ? 'btn-primary' : 'btn-danger'}`} disabled={disabled} onClick={() => (spec.confirm ? setConfirming(a) : void fire(a))}>
-                {spec.label}
+                {labelOf(a)}
               </button>
             );
           })}

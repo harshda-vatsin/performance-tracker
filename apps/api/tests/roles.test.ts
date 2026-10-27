@@ -45,7 +45,9 @@ describe('the seven roles', () => {
     expect(await permissionsOf('CHR')).toEqual(
       expect.arrayContaining(['templates:write', 'templates:approve', 'reopen:request', 'reopen:approve', 'submissions:lock', 'audit:read_business', 'appraisals:assign']),
     );
-    expect(await permissionsOf('EMP')).toEqual(['myscores:read', 'senior:own']);
+    expect(await permissionsOf('EMP')).toEqual(['bonus:own', 'myscores:read', 'senior:own']); // own scores, own bonus statement, own goal sheet
+    expect(await permissionsOf('ADMIN')).not.toEqual(expect.arrayContaining(['bonus:read'])); // pay data is invisible to Admin
+    expect(await permissionsOf('CHR')).toEqual(expect.arrayContaining(['settings:write', 'bonus:calculate', 'bonus:approve', 'bonus:export']));
     expect(await permissionsOf('ADMIN')).toEqual(expect.arrayContaining(['users:manage', 'audit:read_system']));
   });
 

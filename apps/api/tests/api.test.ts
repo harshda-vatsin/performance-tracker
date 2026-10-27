@@ -146,7 +146,7 @@ describe('authorisation (server-enforced)', () => {
     const { cookie } = await loginAs('E1090');
     const me = (await get('/me', cookie)).json();
     expect(me.roles).toHaveLength(1);
-    expect(me.permissions).toEqual(['myscores:read', 'senior:own']); // own scores and own goal sheet
+    expect(me.permissions).toEqual(['bonus:own', 'myscores:read', 'senior:own']); // own scores, own bonus statement and own goal sheet
     expect((await get('/org/units', cookie)).statusCode).toBe(403);
     expect((await get('/me/scores', cookie)).statusCode).toBe(200);
 

@@ -24,6 +24,13 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const env = { ...process.env, DATABASE_URL: e2eUrl, SEED_PASSWORD: PASSWORD, PORT: String(API_PORT), NODE_ENV: 'development' };
   execFileSync(process.execPath, [tsxCli, 'src/seed.ts'], { cwd: apiDir, env, stdio: 'pipe' });
 
+  // These specs walk the full review chain (HOD verify, Plant Head approve, Corporate HR lock, reviewer sign-off). Those steps are
+  // switched off by default, so the suite switches them on, exactly as Corporate HR would. The demo spec runs the defaults.
+  const seeded = new pg.Client({ connectionString: e2eUrl });
+  await seeded.connect();
+  await seeded.query('UPDATE core.workflow_setting SET enabled = true');
+  await seeded.end();
+
   const api: ChildProcess = spawn(process.execPath, [tsxCli, 'src/server.ts'], { cwd: apiDir, env, stdio: 'pipe' });
   let log = '';
   api.stdout?.on('data', (d) => (log += d));

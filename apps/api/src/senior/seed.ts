@@ -85,7 +85,21 @@ function sampleResult(k: { unit: string; presentLevel: number; targets: number[]
   return Math.round(value * 100) / 100;
 }
 
+/**
+ * The sample cycles below are built with reviewers, so the reviewer step is switched on while they are created and put back
+ * afterwards: the seeded data is the same whatever the default setting is, and the setting is left as it was.
+ */
 export async function seedSeniorCycles(pool: pg.Pool): Promise<number> {
+  const before = (await pool.query("SELECT enabled FROM core.workflow_setting WHERE key = 'senior.reviewer_step'")).rows[0]?.enabled ?? false;
+  await pool.query("UPDATE core.workflow_setting SET enabled = true WHERE key = 'senior.reviewer_step'");
+  try {
+    return await createSampleCycles(pool);
+  } finally {
+    await pool.query("UPDATE core.workflow_setting SET enabled = $1 WHERE key = 'senior.reviewer_step'", [before]);
+  }
+}
+
+async function createSampleCycles(pool: pg.Pool): Promise<number> {
   if ((await pool.query('SELECT 1 FROM core.senior_cycle LIMIT 1')).rowCount) return 0;
 
   const ctxOf = async (code: string): Promise<Ctx & { userId: string; employeeId: string }> => {

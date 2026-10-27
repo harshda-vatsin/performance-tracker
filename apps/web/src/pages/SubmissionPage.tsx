@@ -24,7 +24,7 @@ function stepsFor(state: string, settings: WorkflowSettings): Step[] {
   switch (state) {
     case 'DRAFT':
     case 'REOPENED':
-      return [{ action: 'submit', label: 'Submit for review', perm: 'submissions:submit', comment: state === 'REOPENED' ? 'required' : undefined }];
+      return [{ action: 'submit', label: settings.monthly.hodVerify ? 'Submit for verification' : 'Submit for review', perm: 'submissions:submit', comment: state === 'REOPENED' ? 'required' : undefined }];
     case 'SUBMITTED':
     case 'VERIFIED':
     case 'APPROVED': {
