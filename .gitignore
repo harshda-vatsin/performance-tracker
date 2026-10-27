@@ -26,3 +26,6 @@ apps/demo/screenshots/
 apps/web/screenshots/
 apps/web/test-results/
 apps/web/playwright-report/
+
+# Throwaway Playwright run that walks docs/TESTING-GUIDE.md against a local stack
+apps/web/guide-check/
