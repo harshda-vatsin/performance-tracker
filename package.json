@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
+    "demo": "node scripts/demo.mjs all",
+    "demo:load": "node scripts/demo.mjs load",
+    "demo:start": "node scripts/demo.mjs start",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   }
