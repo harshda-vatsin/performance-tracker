@@ -25,6 +25,7 @@ apps/demo/screenshots/
 # Playwright output for apps/web (screenshots, traces, reports are regenerated, never committed)
 apps/web/screenshots/
 apps/web/test-results/
+apps/web/test-results-demo/
 apps/web/playwright-report/
 
 # Throwaway Playwright run that walks docs/TESTING-GUIDE.md against a local stack
