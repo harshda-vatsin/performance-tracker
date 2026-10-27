@@ -12,7 +12,7 @@ Replaces MM Forgings Ltd's plant-wise Excel PMS sheets with an auditable web por
 
 | Path | What it is |
 |---|---|
-| `apps/api` | **The real API.** Fastify + `pg`: login, sessions, RBAC, audit log, shop-floor and senior-staff workflows. SQL migrations in `apps/api/migrations` (001 to 006), tests in `apps/api/tests`. |
+| `apps/api` | **The real API.** Fastify + `pg`: login, sessions, RBAC, audit log, shop-floor and senior-staff workflows. SQL migrations in `apps/api/migrations` (001 to 008), tests in `apps/api/tests`. |
 | `apps/web` | **The real UI.** React + Vite portal. Playwright e2e specs in `apps/web/e2e`. |
 | `packages/scoring` | `@mmf/scoring`: the pure scoring engine, tested against the worked examples in doc 05. Both tracks use it. |
 | `apps/demo` | **Old front-end-only mock (mock data, no login). Kept only as a UX reference. Do not build on it.** |
@@ -33,6 +33,13 @@ Admin (`ADMIN`), Management (`MGMT`), Corporate HR (`CHR`), Plant HR (`PHR`), Pl
 
 Both tracks reuse the same scoring engine, approvals, audit log and roll-ups. Extend them; do not build parallel versions.
 
+## Configurable approval steps and the bonus module
+
+- **Settings** (migration 007, `apps/api/src/workflow.ts`, `/settings/workflow`, set by Corporate HR): `monthly.hod_verify`, `monthly.plant_head_approve` and `senior.reviewer_step`, all **off by default**. Default flows: shop floor *Plant HR submits, Corporate HR locks*; senior monthly results *manager enters and confirms*; senior appraisal *self, manager, HR finalise*. Code, states and triggers for the optional steps are all still there; `nextStep()` skips the ones that are off. Tests that walk the full chain switch the steps on in their setup (`UPDATE core.workflow_setting SET enabled = true`); `workflow-settings.test.ts` covers the defaults and toggling.
+- **Two-person rules are not settings**: templates, scorecard target changes, reopen, bonus batches. Maker is never checker, enforced by CHECK constraints and triggers.
+- **Bonus** (migration 008, `apps/api/src/routes/bonus.ts`, `apps/api/src/bonus/`, schema `pay`): score band to a percentage of a base amount, Corporate HR calculates a plant-month batch, a *different* Corporate HR user approves (locks), corrections are separate adjustment batches, all money is integer paise (bigint) and percentages are basis points. Employee statement at `/me/bonus`, payroll CSV/Excel at `/bonus/export`. Admin holds no `bonus:*` permission, and audit entries carry counts, never amounts.
+- A plant type can be scored at the plant itself (`scoring_unit_type = 'PLANT'`), as the demo does.
+
 ## Running it
 
 ```bash
@@ -46,6 +53,10 @@ npm run dev -w @mmf/web             # http://127.0.0.1:5173, proxies /api to the
 
 Defaults: `DATABASE_URL=postgres://mmf:mmf_dev_only@localhost:5442/mmf`, `PORT`, `MFA_BYPASS`. Set `SEED_PASSWORD` before seeding to give every dev user one known password. Without it each user gets a random password.
 
+### Client demo: the `mmf_demo` database
+
+`npm run demo` drops and recreates `mmf_demo`, loads the simplified demo data (`apps/api/src/seed-demo.ts`, refuses any other database) and starts the API and web app on 4000 / 5173. All logins share the password `Demo-2026-Pass`. The 10-minute script is `docs/DEMO-SCRIPT.md`; `npm run test:demo -w @mmf/web` runs it in a browser on ports 4300 / 5373 and **reloads `mmf_demo` first**, so run `npm run demo` again afterwards. Do not edit the dev seed (`seed.ts`) or `mmf_local` for the demo.
+
 ### Manual testing: the `mmf_local` database
 
 Use a separate `mmf_local` database on the same Postgres container for hands-on testing, so the `mmf` dev data stays clean. Create it if it is missing, then migrate and seed with `DATABASE_URL=postgres://mmf:mmf_dev_only@localhost:5442/mmf_local` and `SEED_PASSWORD=Mmf-Local-Dev1`, and run the API and web against it. Never point manual testing at `mmf_test` or `mmf_e2e`: the test runs drop and recreate them.
@@ -57,9 +68,11 @@ npm run typecheck                           # all workspaces
 npm test                                    # all workspaces: scoring, API, web, demo
 npx playwright install chromium             # once
 npm run test:e2e -w @mmf/web                # full browser suite, one worker
+npm run test:demo -w @mmf/web               # the demo script against mmf_demo (reloads it)
 ```
 
 - **The API tests need Postgres running** on localhost:5442. Without it, every suite fails in setup with `ECONNREFUSED` (looks like `Cannot read properties of undefined (reading 'close')`), not with a real assertion failure. They use a fresh `mmf_test` database each run.
+- **The e2e suite switches the optional approval steps on** in its global setup (it walks the full chain); the demo spec runs the defaults.
 - **The e2e suite is self-contained**: it uses its own database (`mmf_e2e`), API (port 4100) and Vite server (port 5273), and runs specs in order on one worker because each spec builds on the previous one's data. It writes screenshots to `apps/web/screenshots/` (git-ignored).
 - **Windows note, `99-screenshots.spec.ts`:** late in a full run (about 6 minutes in) one test can fail with `WebSocket connection to 'ws://127.0.0.1:5273/...' failed: net::ERR_NO_BUFFER_SPACE`. That is the Windows socket-buffer limit hit by the Vite HMR websocket after many browser sessions, **not an app bug**. The spec runs serially, so the tests after the failure are skipped. Do not "fix" app code for it. Skip that spec or run it on its own (`npx playwright test e2e/99-screenshots.spec.ts --workers=1`).
 - `apps/web/guide-check/` is a throwaway Playwright run that walks the testing guide against the `mmf_local` stack. It is git-ignored; leave it out of commits.
