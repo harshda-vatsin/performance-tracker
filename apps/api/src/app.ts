@@ -8,6 +8,7 @@ import { dbErrorResponse } from './http.js';
 import { hasAnyScope, scopeCovers, scopeFor } from './rbac/policy.js';
 import { appraisalRoutes } from './routes/appraisals.js';
 import { auditLogRoutes } from './routes/audit-log.js';
+import { bonusRoutes } from './routes/bonus.js';
 import { configRoutes } from './routes/config.js';
 import { myScoresRoutes } from './routes/my-scores.js';
 import { employeeRoutes } from './routes/employees.js';
@@ -190,6 +191,7 @@ export function buildApp(pool: pg.Pool): FastifyInstance {
   };
   configRoutes(app, pool, guards);
   settingsRoutes(app, pool, guards);
+  bonusRoutes(app, pool, guards);
   orgRoutes(app, pool, guards);
   employeeRoutes(app, pool, guards);
   kpiRoutes(app, pool, guards);
